@@ -220,55 +220,56 @@
 
     let currentLang = 'zh'; // 'zh' or 'en'
 
-// ====== Menu Data：由 Google Sheet CSV 載入 ======
-let menuData = [];
+    // ====== Menu Data：由 Google Sheet CSV 載入 ======
+    let menuData = [];
 
-async function loadMenuFromSheet() {
-  const sheetId = '1ttd8WfW8V-5JwTv9-aTWlji1qW8N3f2jUjO13zMqtqc';   // 你個 FU Shi Testing
-  const sheetName = 'FullMenu';                                // menu 個 tab 名
+    async function loadMenuFromSheet() {
+      const sheetId = '1ttd8WfW8V-5JwTv9-aTWlji1qW8N3f2jUjO13zMqtqc';   // FU Shi Testing
+      const sheetName = 'FullMenu';                                    // menu 個 tab 名
 
-  const url =
-    `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+      const url =
+        `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error('loadMenuFromSheet error', res.status, res.statusText);
-      addBot(
-        currentLang === 'zh'
-          ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-          : 'There was an issue loading the live menu.'
-      );
-      return;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          console.error('loadMenuFromSheet error', res.status, res.statusText);
+          addBot(
+            currentLang === 'zh'
+              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+              : 'There was an issue loading the live menu.'
+          );
+          return;
+        }
+
+        const csv = await res.text();
+        const rows = csv.split('\n').map(r => r.trim()).filter(r => r);
+        const dataRows = rows.slice(1); // 略過標題行
+
+        menuData = dataRows
+          // 使用正則，避免拆開引號內的逗號
+          .map(line => line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/))
+          .filter(cols => cols.length >= 4)
+          .map(cols => {
+            const period = cols[0] ? cols[0].replace(/"/g, '').trim() : 'All Day';
+            const item   = cols[1] ? cols[1].replace(/"/g, '').trim() : '';
+            const meat   = cols[2] ? cols[2].replace(/"/g, '').trim() : '';
+            const price  = cols[3] ? Number(cols[3].replace(/"/g, '').trim()) : 0;
+
+            return {
+              period: period || 'All Day',
+              nameZh: item,
+              nameEn: item,
+              meat: meat,
+              price: price
+            };
+          });
+
+        console.log('menuData sample', menuData[0]);
+      } catch (err) {
+        console.error('loadMenuFromSheet exception', err);
+      }
     }
-
-    const csv = await res.text();
-    const rows = csv.split('\n').map(r => r.trim()).filter(r => r);
-    const dataRows = rows.slice(1); // 略過標題行
-
-    menuData = dataRows
-      .map(line => line.split(','))
-      .filter(cols => cols.length >= 4)
-      .map(cols => {
-        const period = cols[0] ? cols[0].trim() : 'All Day';
-        const item   = cols[1] ? cols[1].trim() : '';
-        const meat   = cols[2] ? cols[2].trim() : '';
-        const price  = cols[3] ? Number(cols[3].trim()) : 0;
-
-        return {
-          period: period || 'All Day',
-          nameZh: item,
-          nameEn: item,
-          meat: meat,
-          price: price
-        };
-      });
-
-    console.log('menuData sample', menuData[0]);
-  } catch (err) {
-    console.error('loadMenuFromSheet exception', err);
-  }
-}
 
     const texts = {
       title: {
@@ -407,7 +408,7 @@ async function loadMenuFromSheet() {
       return `HK$${price}`;
     }
 
-    // ====== 推介菜式：用 Web App JSON ======
+    // ====== 推介菜式 ======
     function recommendDishes(meatTag) {
       if (!menuData || menuData.length === 0) {
         addBot(
@@ -483,6 +484,21 @@ async function loadMenuFromSheet() {
     function handleKeyword(raw) {
       const t = normalize(raw);
       addUser(raw);
+
+      // 直接講「想食牛 / 雞 / 豬 / 海鮮 / 素」都當係要推介
+      const quickMeat = chooseMeatTagFromText(raw);
+      if (
+        quickMeat &&
+        !t.includes('訂位') &&
+        !t.includes('訂枱') &&
+        !t.includes('到會') &&
+        !t.includes('大量訂購') &&
+        !t.includes('外賣') &&
+        !t.includes('takeaway')
+      ) {
+        recommendDishes(quickMeat);
+        return;
+      }
 
       // 訂位
       if (
@@ -735,4 +751,3 @@ async function loadMenuFromSheet() {
   </script>
 </body>
 </html>
-

@@ -411,15 +411,25 @@
     }
 
     function recommendDishes(meatTag) {
-      if (!menuData || menuData.length === 0) {
-        addBot(
-          currentLang === 'zh'
-            ? '暫時未載入餐牌資料，可以先睇電子餐牌：'
-            : 'Menu data is not loaded yet. You can check the e-menu here:'
-        );
-        addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">FuShi Menu</a>');
-        return;
-      }
+    console.log('recommendDishes meatTag =', meatTag);
+
+    const tag = meatTag.toLowerCase();
+
+    const list = menuData.filter(d => {
+    const m = (d.meat || '').toLowerCase();
+    if (tag === 'beef')      return m.includes('beef') || m.includes('牛');
+    if (tag === 'chicken')   return m.includes('chicken') || m.includes('雞');
+    if (tag === 'pork')      return m.includes('pork') || m.includes('豬');
+    if (tag === 'sea food')  return m.includes('sea food') || m.includes('魚');
+    if (tag === 'vegan')     return m.includes('vegan') || m.includes('素');
+    return false;
+    });
+    console.log('recommended list size =', list.length);
+
+  // 之後照你原本邏輯，例如：
+  // shuffle(list) 然後揀頭 3 個，組裝成回覆文字
+}
+
 
       const now = new Date();
       const hour = now.getHours();
@@ -739,4 +749,5 @@
   </script>
 </body>
 </html>
+
 

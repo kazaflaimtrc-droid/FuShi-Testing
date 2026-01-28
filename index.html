@@ -36,19 +36,16 @@
   let isZh = true;
 
   // Demo：正式用時，改為從 Google Apps Script 端點載入
-  async function loadMenuFromSheet() {
-    // 你可以改成 fetch('你的 WebApp URL?type=menu')
-    // 這裡用硬寫示例：
-    menuData = [
-      {period:'Breakfast', item:'特厚咸牛肉松露蛋治', meat:'牛',  price:35},
-      {period:'Breakfast', item:'Grilled Chicken & Japanese Cheese Sandwich', meat:'Chicken', price:35},
-      {period:'Lunch', item:'豬軟骨薑汁炆飯', meat:'豬', price:78},
-      {period:'Lunch', item:'Fragrant Coconut Chicken Soup With Rice', meat:'Chicken', price:68},
-      {period:'Lunch', item:'白胡椒豬肚雞煲飯', meat:'Chicken', price:68},
-      // ……其餘全部從 Sheet 載入
-    ];
-    console.log('menu loaded, size =', menuData.length);
+async function loadMenuFromSheet() {
+  const url = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLjRk76Cv1SUahaCV2VTfnAUPH7pOkQEOVxdJJLGkhXb03hfLH6nNNX6i_-5ZMVDgaf9LuMpiEI-f8fShwntwCyy0fjeyZuDD3yC_K9UA8ovhZ81VXpJ0KVaVgoM4sAaFPsaZfT7J7ktw4s0N-ncuGcd-I5UGoJduQUZLFTKZ0bxBtDzFn2BfyuaI4NK98oCKaUd0i2iKkE9WLl-DJkts4aOf95h8_nnYgqTPEwdZ-CROWZh_5viNU9jAH9ojRoJG98ZG9hKgifbWwpt5P_i7A6PTAUEztugP-4mKSakwLmqAENDMfU&lib=M6zE5uGH_-MjnpuxBbUD7FtaNBYDonqKF';
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.error('loadMenuFromSheet error', res.status, res.statusText);
+    return;
   }
+  menuData = await res.json();
+  console.log('menu loaded, size =', menuData.length);
+}
 
   // ====== UI 基本 ======
   const chatEl = document.getElementById('chat');
@@ -141,19 +138,17 @@
   }
 
   // ====== 推薦菜式 ======
-  function recommendDishes(meatTag) {
-    console.log('recommendDishes meatTag =', meatTag);
-    const tag = meatTag.toLowerCase();
-
-    const list = menuData.filter(d => {
-      const m = (d.meat || '').toLowerCase();
-      if (tag === 'beef')     return m.includes('beef') || m.includes('牛');
-      if (tag === 'chicken')  return m.includes('chicken') || m.includes('雞');
-      if (tag === 'pork')     return m.includes('pork') || m.includes('豬');
-      if (tag === 'sea food') return m.includes('sea food') || m.includes('魚');
-      if (tag === 'vegan')    return m.includes('vegan') || m.includes('素');
-      return false;
-    });
+function recommendDishes(meatTag) {
+  const tag = meatTag.toLowerCase();
+  const list = menuData.filter(d => {
+    const m = (d.meat || '').toLowerCase();
+    if (tag === 'beef')     return m.includes('beef') || m.includes('牛');
+    if (tag === 'chicken')  return m.includes('chicken') || m.includes('雞');
+    if (tag === 'pork')     return m.includes('pork') || m.includes('豬');
+    if (tag === 'sea food') return m.includes('sea food') || m.includes('魚');
+    if (tag === 'vegan')    return m.includes('vegan') || m.includes('素');
+    return false;
+  });
 
     console.log('recommended list size =', list.length);
 
@@ -277,3 +272,4 @@
 </script>
 </body>
 </html>
+

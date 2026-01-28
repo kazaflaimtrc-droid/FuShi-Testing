@@ -1,753 +1,279 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-HK">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>福食小助手</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f5f5f5;
-      display: flex;
-      justify-content: center;
-      padding: 40px 10px;
-    }
-    .chat-container {
-      background: #ffffff;
-      max-width: 420px;
-      width: 100%;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .top-bar {
-      font-weight: bold;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-    }
-    .lang-btn {
-      font-size: 12px;
-      padding: 4px 6px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      background: #f0f0f0;
-      cursor: pointer;
-    }
-    .chat-window {
-      height: 360px;
-      overflow-y: auto;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 10px;
-      background: #fafafa;
-    }
-    .msg {
-      margin-bottom: 8px;
-      line-height: 1.4;
-    }
-    .bot {
-      color: #333;
-    }
-    .user {
-      text-align: right;
-      color: #007bff;
-    }
-    .input-area {
-      display: flex;
-      gap: 6px;
-      margin-top: 4px;
-    }
-    .input-area input {
-      flex: 1;
-      padding: 6px 8px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-    }
-    .input-area button {
-      padding: 6px 10px;
-      border-radius: 4px;
-      border: none;
-      background: #28a745;
-      color: #fff;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    .input-area button:hover {
-      background: #218838;
-    }
-    #reservationForm,
-    #cateringForm {
-      font-size: 13px;
-      border-top: 1px solid #eee;
-      margin-top: 6px;
-      padding-top: 4px;
-    }
-    #reservationForm label,
-    #cateringForm label {
-      display: inline-block;
-      width: 110px;
-    }
-    #reservationForm input,
-    #cateringForm input,
-    #cateringForm textarea {
-      font-size: 13px;
-      padding: 3px 5px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
-    #rsvWaBtn,
-    #cateringWaBtn {
-      margin-top: 4px;
-      padding: 4px 8px;
-      font-size: 13px;
-      border-radius: 4px;
-      border: none;
-      background: #25d366;
-      color: #fff;
-      cursor: pointer;
-    }
-    #rsvWaBtn:hover,
-    #cateringWaBtn:hover {
-      background: #1ebe57;
-    }
-    a {
-      color: #007bff;
-    }
-    #cateringForm textarea {
-      width: 100%;
-      min-height: 40px;
-      resize: vertical;
-    }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .chat-wrapper { max-width: 420px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; }
+    .chat-header { padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .chat-body { padding: 12px 16px; max-height: 520px; overflow-y: auto; }
+    .msg { margin-bottom: 8px; }
+    .msg-bot { color: #222; }
+    .msg-user { text-align: right; color: #0066cc; }
+    .input-row { border-top: 1px solid #eee; padding: 8px; display: flex; gap: 8px; }
+    .input-row input { flex: 1; padding: 6px 8px; }
+    .input-row button { padding: 6px 12px; }
+    a { color: #0066cc; text-decoration: none; }
   </style>
 </head>
 <body>
-  <div class="chat-container">
-    <div class="top-bar">
-      <span id="titleText">福食飲食小助手</span>
-      <button id="langBtn" class="lang-btn">中文 / EN</button>
-    </div>
-
-    <div id="chat" class="chat-window"></div>
-
-    <!-- 訂位資料表單 -->
-    <div id="reservationForm" style="display:none;">
-      <div style="margin-bottom:4px;">
-        <label>人數 / People：</label>
-        <input id="rsvPax" type="number" min="1" style="width:80px;">
-      </div>
-      <div style="margin-bottom:4px;">
-        <label>日期 / Date：</label>
-        <input id="rsvDate" type="date">
-      </div>
-      <div style="margin-bottom:4px;">
-        <label>時間 / Time：</label>
-        <input id="rsvTime" type="time">
-      </div>
-      <div style="margin-bottom:4px;">
-        <label>電話 / Phone：</label>
-        <input id="rsvPhone" type="tel" placeholder="852XXXXXXXX" style="width:140px;">
-      </div>
-      <button id="rsvWaBtn">
-        用 WhatsApp 傳送訂位資料 / Send booking via WhatsApp
-      </button>
-    </div>
-
-    <!-- 到會 / 大量訂購表單 -->
-    <div id="cateringForm" style="display:none;">
-      <div style="margin-bottom:4px;">
-        <label>用途 / Occasion：</label>
-        <input id="catOccasion" type="text" placeholder="公司活動 / 生日會...">
-      </div>
-      <div style="margin-bottom:4px;">
-        <label>人數 / 份量：</label>
-        <input id="catPax" type="text" placeholder="例如：20人 / 30盒飯">
-      </div>
-      <div style="margin-bottom:4px;">
-        <label>日期 / Date：</label>
-        <input id="catDate" type="date">
-      </div>
-      <div style="margin-bottom:4px;">
-        <label>時間 / Time：</label>
-        <input id="catTime" type="time">
-      </div>
-      <div style="margin-bottom:4px;">
-        <label>簡單菜式 / Set：</label>
-        <textarea id="catItems" placeholder="例如：到會A套餐 x2, B套餐 x1"></textarea>
-      </div>
-      <div style="margin-bottom:4px;">
-        <label>聯絡人 / 電話：</label>
-        <input id="catContact" type="text" placeholder="Mr Chan 9xxxxxxx">
-      </div>
-      <button id="cateringWaBtn">
-        用 WhatsApp 傳送到會／大量訂購資料 / Send via WhatsApp
-      </button>
-    </div>
-
-    <div class="input-area">
-      <input id="userInput" type="text"
-             placeholder="請直接輸入你的問題 / Please type your question">
-      <button id="sendBtn">送出</button>
-    </div>
+<div class="chat-wrapper">
+  <div class="chat-header">
+    <div>福食小助手</div>
+    <button id="langToggle">中文 / EN</button>
   </div>
+  <div id="chat" class="chat-body"></div>
+  <div class="input-row">
+    <input id="userInput" placeholder="請話畀我知你嘅問題，例如：有咩好食、幫我訂位…" />
+    <button id="sendBtn">送出</button>
+  </div>
+</div>
 
-  <script>
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const langBtn = document.getElementById('langBtn');
-    const titleText = document.getElementById('titleText');
+<script>
+  // ====== 基本資料（Menu 從後端載入） ======
+  let menuData = [];    // [{period, item, meat, price}, ...]
+  let isZh = true;
 
-    const rsvForm = document.getElementById('reservationForm');
-    const rsvPaxInput = document.getElementById('rsvPax');
-    const rsvDateInput = document.getElementById('rsvDate');
-    const rsvTimeInput = document.getElementById('rsvTime');
-    const rsvPhoneInput = document.getElementById('rsvPhone');
-    const rsvWaBtn = document.getElementById('rsvWaBtn');
+  // Demo：正式用時，改為從 Google Apps Script 端點載入
+  async function loadMenuFromSheet() {
+    // 你可以改成 fetch('你的 WebApp URL?type=menu')
+    // 這裡用硬寫示例：
+    menuData = [
+      {period:'Breakfast', item:'特厚咸牛肉松露蛋治', meat:'牛',  price:35},
+      {period:'Breakfast', item:'Grilled Chicken & Japanese Cheese Sandwich', meat:'Chicken', price:35},
+      {period:'Lunch', item:'豬軟骨薑汁炆飯', meat:'豬', price:78},
+      {period:'Lunch', item:'Fragrant Coconut Chicken Soup With Rice', meat:'Chicken', price:68},
+      {period:'Lunch', item:'白胡椒豬肚雞煲飯', meat:'Chicken', price:68},
+      // ……其餘全部從 Sheet 載入
+    ];
+    console.log('menu loaded, size =', menuData.length);
+  }
 
-    const cateringForm = document.getElementById('cateringForm');
-    const catOccasionInput = document.getElementById('catOccasion');
-    const catPaxInput = document.getElementById('catPax');
-    const catDateInput = document.getElementById('catDate');
-    const catTimeInput = document.getElementById('catTime');
-    const catItemsInput = document.getElementById('catItems');
-    const catContactInput = document.getElementById('catContact');
-    const cateringWaBtn = document.getElementById('cateringWaBtn');
+  // ====== UI 基本 ======
+  const chatEl = document.getElementById('chat');
+  const inputEl = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const langBtn = document.getElementById('langToggle');
 
-    let currentLang = 'zh'; // 'zh' or 'en'
+  function addBot(text) {
+    const div = document.createElement('div');
+    div.className = 'msg msg-bot';
+    div.textContent = text;
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
 
-    // ====== Menu Data：由 Google Sheet CSV 載入 ======
-    let menuData = [];
+  function addUser(text) {
+    const div = document.createElement('div');
+    div.className = 'msg msg-user';
+    div.textContent = text;
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
 
-    async function loadMenuFromSheet() {
-      console.log('loadMenuFromSheet called'); 
-      
-      const sheetId = '1ttd8WfW8V-5JwTv9-aTWlji1qW8N3f2jUjO13zMqtqc';
-      const sheetName = 'FullMenu';
+  function renderGreeting() {
+    if (isZh) {
+      addBot('哈囉～歡迎嚟到「福食」！我係你嘅飲食小助手 😉');
+      addBot('你可以好自然咁問我，例如：有咩好食、今日食咩好、幫我訂位、到會／大量訂購、外賣、有冇優惠等等。');
+      addBot('你而家最想我幫你做啲咩呢？');
+      addBot('暫時未有符合條件嘅菜式，可以睇吓完整餐牌： FuShi Menu（放返網址）');
+      addBot('你可以打：我想食牛、想訂位、到會、大量訂購、今日有咩推介 等等。');
+    } else {
+      addBot('Hi, welcome to FuShi! I am your dining assistant.');
+      addBot('You can ask things like: what to eat today, recommendations, make a reservation, bulk purchase, catering, promotions, etc.');
+      addBot('What can I help you with now?');
+    }
+  }
 
-      const url =
-        `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  // ====== Intent 判斷 ======
+  function detectIntent(text) {
+    const t = text.toLowerCase();
 
-      try {
-        const res = await fetch(url);
-        const csv = await res.text();
-        console.log('csv length =', csv.length);
-
-        const rows = csv.split('\n').map(r => r.trim()).filter(r => r);
-        const dataRows = rows.slice(1);
-
-        menuData = dataRows
-          .map(line => line.split(','))
-          .filter(cols => cols.length >= 4)
-          .map(cols => {
-            const period = cols[0] ? cols[0].trim() : 'All Day';
-            const item   = cols[1] ? cols[1].trim() : '';
-            const meat   = cols[2] ? cols[2].trim() : '';
-            const price  = cols[3] ? Number(cols[3].trim()) : 0;
-
-            return {
-              period: period || 'All Day',
-              nameZh: item,
-              nameEn: item,
-              meat: meat,
-              price: price
-            };
-          });
-
-        addBot(
-          currentLang === 'zh'
-            ? '已從餐牌載入最新菜式資料 ✅'
-            : 'Latest menu data loaded from Google Sheet ✅'
-        );
-      } catch (err) {
-        console.error(err);
-        addBot(
-          currentLang === 'zh'
-            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-            : 'There was an issue loading the live menu. Using fallback logic only.'
-        );
-      }
+    // 食咩好 / 推薦
+    if (
+      t.includes('食咩好') ||
+      t.includes('有咩好食') ||
+      t.includes('有乜好食') ||
+      t.includes('推薦') ||
+      t.includes('推介') ||
+      t.includes('recommend') ||
+      t.includes('suggest') ||
+      t.includes('what to eat')
+    ) {
+      return 'eatToday';
     }
 
-    const texts = {
-      title: {
-        zh: '福食小助手',
-        en: 'Fushi Food Assistant'
-      },
-      langBtn: {
-        zh: '中文 / EN',
-        en: 'EN / 中文'
-      },
-      placeholder: {
-        zh: '請直接輸入你的問題，例如：有咩好食、幫我訂位、到會、大量訂購、外賣、有冇優惠…',
-        en: 'Type your question, e.g. what to eat, book a table, catering / bulk order, takeaway, any promotion…'
-      },
-      welcome1: {
-        zh: '哈囉～ 歡迎嚟到「福食」！我係你嘅飲食小助手 👋',
-        en: 'Hi! Welcome to "Fushi". I am your food assistant 👋'
-      },
-      welcome2: {
-        zh: '你可以好自然咁問我，例如：有咩好食、今日食咩好、幫我訂位、到會／大量訂購、外賣、有冇優惠等等。',
-        en: 'You can ask me naturally, e.g. what to eat, any good food, book a table, catering / bulk orders, takeaway or promotions.'
-      },
-      askMain: {
-        zh: '你而家最想我幫你做啲乜？',
-        en: 'What would you like me to help you with first?'
-      },
-      fallback1: {
-        zh: '我暫時未完全聽得明你嘅意思 😅',
-        en: 'I\'m not fully sure what you mean yet 😅'
-      },
-      fallback2: {
-        zh: '你可以問我：訂位、到會／大量訂購、今日食咩好、外賣、餐牌或者有冇優惠。',
-        en: 'You can ask about: booking, catering / bulk orders, what to eat, takeaway, menu or promotions.'
-      },
-      eatAsk: {
-        zh: '今日有冇特別想食嘅肉類或海鮮呢？例如：牛、雞、豬、海鮮、素食～你可以打「想食牛」「chicken」等。',
-        en: 'Any preference today? For example: beef, chicken, pork, seafood or vegan. You can type "want beef", "chicken", etc.'
-      },
-      eatReplyIntro: {
-        zh: '根據你嘅喜好，我可以幫你喺餐牌入面揀幾款菜式。',
-        en: 'Based on your preference, I can pick a few dishes from the menu for you.'
-      },
-      eatMenu: {
-        zh: '你亦可以自己睇電子餐牌：',
-        en: 'You can also browse the e-menu yourself:'
-      },
-      rsvAskPax: {
-        zh: '好嘢！等我幫你留個靚位先～請問大約幾多位呢？你可以直接話「4位」、「6位」咁樣。',
-        en: 'Great! Let me help you reserve a table. Roughly how many people? You can type "4 people", "6 pax"...'
-      },
-      rsvFormIntro: {
-        zh: '為咗幫你快啲訂位，可以填一填下面簡單資料，之後一撳就會開 WhatsApp 同我哋確認。',
-        en: 'To speed up your booking, you can fill in the simple form below, then click once to open WhatsApp with all details.'
-      },
-      rsvDone: {
-        zh: '如果有位嘅話，我哋會喺 WhatsApp 回覆你確認，唔該晒！',
-        en: 'If a table is available, we will confirm with you on WhatsApp. Thank you!'
-      },
-      rsvFormBtn: {
-        zh: '用 WhatsApp 傳送訂位資料',
-        en: 'Send booking via WhatsApp'
-      },
-      cateringIntro: {
-        zh: '好呀～到會同大量訂購我哋都可以幫你安排。請先填下面幾項基本資料，之後一撳就會開 WhatsApp 傳送俾我哋。',
-        en: 'Great! We can help with catering and bulk orders. Please fill in the basic details below, then click the button to send us a WhatsApp message.'
-      },
-      menuText: {
-        zh: '你可以喺度睇我哋電子菜單：',
-        en: 'You can view our e-menu here:'
-      },
-      takeawayText: {
-        zh: '外賣／自取可以喺下面連結落單：',
-        en: 'You can place takeaway / pick-up orders via this link:'
-      },
-      promoText: {
-        zh: '最近嘅優惠可以喺我哋電子菜單同宣傳見到：',
-        en: 'You can find our latest promotions in the e-menu and marketing materials:'
-      }
-    };
-
-    function applyLanguage() {
-      titleText.textContent = texts.title[currentLang];
-      langBtn.textContent = texts.langBtn[currentLang];
-      input.placeholder = texts.placeholder[currentLang];
-      rsvWaBtn.textContent = texts.rsvFormBtn[currentLang];
+    // 訂位
+    if (t.includes('訂位') || t.includes('reservation') || t.includes('book a table')) {
+      return 'reservation';
     }
 
-    function addBot(text) {
-      const div = document.createElement('div');
-      div.className = 'msg bot';
-      div.textContent = text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
+    // 大量訂購 / Bulk
+    if (t.includes('大量訂購') || t.includes('bulk') || t.includes('corporate order')) {
+      return 'bulk';
     }
 
-    function addBotHTML(html) {
-      const div = document.createElement('div');
-      div.className = 'msg bot';
-      div.innerHTML = html;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
+    // 到會 / Catering
+    if (t.includes('到會') || t.includes('catering')) {
+      return 'catering';
     }
 
-    function addUser(text) {
-      const div = document.createElement('div');
-      div.className = 'msg user';
-      div.textContent = text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
+    // 線上落單
+    if (t.includes('外賣') || t.includes('外送') || t.includes('online order')) {
+      return 'order';
     }
 
-    function normalize(text) {
-      return text.toLowerCase().trim();
-    }
+    return 'fallback';
+  }
 
-    langBtn.addEventListener('click', () => {
-      currentLang = currentLang === 'zh' ? 'en' : 'zh';
-      applyLanguage();
-      addBot(
-        currentLang === 'zh'
-          ? '已切換到中文介面，你可以用中文繼續同我傾～'
-          : 'Switched to English interface. You can continue in English if you like.'
-      );
-    });
+  // 從句子中抽肉類（中文＋英）
+  function chooseMeatTagFromText(text) {
+    const t = text.toLowerCase();
 
-    function welcome() {
-      chat.innerHTML = '';
-      addBot(texts.welcome1[currentLang]);
-      addBot(texts.welcome2[currentLang]);
-      addBot(texts.askMain[currentLang]);
-      rsvForm.style.display = 'none';
-      cateringForm.style.display = 'none';
-    }
+    if (t.includes('牛') || t.includes('beef')) return 'Beef';
+    if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
+    if (t.includes('豬') || t.includes('pork')) return 'Pork';
+    if (t.includes('魚') || t.includes('seafood') || t.includes('sea food')) return 'Sea Food';
+    if (t.includes('素') || t.includes('vegan') || t.includes('vegetarian')) return 'Vegan';
 
-    function formatPrice(price) {
-      return `HK$${price}`;
-    }
+    return null;
+  }
 
-    function recommendDishes(meatTag) {
+  // ====== 推薦菜式 ======
+  function recommendDishes(meatTag) {
     console.log('recommendDishes meatTag =', meatTag);
-
     const tag = meatTag.toLowerCase();
 
     const list = menuData.filter(d => {
-    const m = (d.meat || '').toLowerCase();
-    if (tag === 'beef')      return m.includes('beef') || m.includes('牛');
-    if (tag === 'chicken')   return m.includes('chicken') || m.includes('雞');
-    if (tag === 'pork')      return m.includes('pork') || m.includes('豬');
-    if (tag === 'sea food')  return m.includes('sea food') || m.includes('魚');
-    if (tag === 'vegan')     return m.includes('vegan') || m.includes('素');
-    return false;
+      const m = (d.meat || '').toLowerCase();
+      if (tag === 'beef')     return m.includes('beef') || m.includes('牛');
+      if (tag === 'chicken')  return m.includes('chicken') || m.includes('雞');
+      if (tag === 'pork')     return m.includes('pork') || m.includes('豬');
+      if (tag === 'sea food') return m.includes('sea food') || m.includes('魚');
+      if (tag === 'vegan')    return m.includes('vegan') || m.includes('素');
+      return false;
     });
+
     console.log('recommended list size =', list.length);
 
-  // 之後照你原本邏輯，例如：
-  // shuffle(list) 然後揀頭 3 個，組裝成回覆文字
-}
-
-
-      const now = new Date();
-      const hour = now.getHours();
-      let currentPeriod = 'All Day';
-      if (hour < 11) currentPeriod = 'Breakfast';
-      else if (hour < 17) currentPeriod = 'Lunch';
-
-      let list = menuData.filter(
-        d => d.meat.toLowerCase() === meatTag.toLowerCase()
-      );
-
-      const periodPreferred = list.filter(
-        d => d.period === currentPeriod || d.period === 'All Day'
-      );
-      if (periodPreferred.length > 0) list = periodPreferred;
-
-      list = list.slice(0, 3);
-
-      if (list.length === 0) {
-        addBot(
-          currentLang === 'zh'
-            ? '暫時未有符合條件嘅菜式，可以睇吓完整餐牌：'
-            : 'Currently no dish matches this filter. You can check the full menu here:'
-        );
-        addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">FuShi Menu</a>');
-        return;
-      }
-
-      addBot(
-        currentLang === 'zh'
-          ? '我幫你喺餐牌揀咗幾款可能啱你嘅菜式：'
-          : 'Here are some dishes from our menu you might like:'
-      );
-
-      list.forEach(dish => {
-        if (currentLang === 'zh') {
-          addBot(`• ${dish.nameZh}（${dish.nameEn}） - ${formatPrice(dish.price)}`);
-        } else {
-          addBot(`• ${dish.nameEn} (${dish.nameZh}) - ${formatPrice(dish.price)}`);
-        }
-      });
-
-      addBot(
-        currentLang === 'zh'
-          ? '想睇更多可以開我哋電子餐牌：'
-          : 'For more options, you can open our e-menu:'
-      );
-      addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">FuShi Menu</a>');
+    if (list.length === 0) {
+      return isZh
+        ? '暫時未有符合條件嘅菜式，不如睇吓完整 FuShi Menu？'
+        : 'I could not find matching dishes for that choice. Please check the full FuShi Menu.';
     }
 
-    function chooseMeatTagFromText(raw) {
-      const t = normalize(raw);
-      if (t.includes('牛') || t.includes('beef')) return 'Beef';
-      if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
-      if (t.includes('豬') || t.includes('pork')) return 'Pork';
-      if (t.includes('海鮮') || t.includes('seafood') || t.includes('sea food')) return 'Sea Food';
-      if (t.includes('素') || t.includes('vegan') || t.includes('veg')) return 'Vegan';
-      return null;
+    // shuffle + 取頭 3 個
+    const shuffled = list.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+    let lines;
+    if (isZh) {
+      lines = shuffled.map(d => `• ${d.item}（${d.price}）`);
+      return '我幫你喺餐牌揀咗幾款可能啱你嘅菜式：\n' + lines.join('\n');
+    } else {
+      lines = shuffled.map(d => `• ${d.item} (HKD ${d.price})`);
+      return 'Here are some dishes that may suit you:\n' + lines.join('\n');
     }
+  }
 
-    // Intent 分類
-    function handleKeyword(raw) {
-      const t = normalize(raw);
-      addUser(raw);
-
-      // 訂位
-      if (
-        t.includes('訂位') ||
-        t.includes('訂枱') ||
-        t.includes('book a table') ||
-        (t.includes('book') && t.includes('table')) ||
-        t.includes('reservation') ||
-        t.includes('reserve') ||
-        t.includes('預約') ||
-        t.includes('預定')
-      ) {
-        flowReservation();
-        return;
+  // ====== Flow：食咩好 ======
+  function flowEatToday(text) {
+    const meatTag = chooseMeatTagFromText(text);
+    if (!meatTag) {
+      if (isZh) {
+        addBot('今日有冇特別想食嘅肉類或海鮮呢？可以話我知：牛、雞、豬、魚、素。');
+      } else {
+        addBot('Any preference today? Beef, chicken, pork, seafood or vegan?');
       }
-
-      // 到會 / 大量訂購
-      if (
-      t.includes('到會') ||
-      t.includes('派對餐') ||
-      t.includes('大量訂購') ||
-      t.includes('catering') ||                    // 新增：任何含 catering
-      (t.includes('bulk') && t.includes('order')) ||
-      (t.includes('group') && t.includes('order'))
-    ) {
-      flowCateringBulk();
       return;
     }
 
-
-      // 優惠
-      if (
-        t.includes('prom') ||
-        t.includes('promo') ||
-        t.includes('promotion') ||
-        t.includes('優惠') ||
-        t.includes('折扣') ||
-        t.includes('coupon') ||
-        t.includes('優惠碼') ||
-        t.includes('offer') ||
-        t.includes('deal') ||
-        (t.includes('special') && t.includes('offer'))
-      ) {
-        addBot(texts.promoText[currentLang]);
-        addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">FuShi Menu</a>');
-        return;
-      }
-
-      // 今日食咩好
-      if (
-        t.includes('今日食咩好') ||
-        t.includes('食咩好') ||
-        t.includes('有咩好食') ||
-        t.includes('有乜好食') ||
-        t.includes('推薦') ||
-        t.includes('推介') ||
-        t.includes('recommend') ||
-        t.includes('recommendation') ||
-        t.includes('suggest') ||
-        t.includes('suggestion') ||
-        t.includes('what to eat') ||
-        (t.includes('eat') && t.includes('what')) ||
-        (t.includes('food') && t.includes('recommend')) ||
-        (t.includes('any') && t.includes('good') && t.includes('food'))
-      ) {
-        flowEatToday();
-        const meatTag = chooseMeatTagFromText(raw);
-        if (meatTag) {
-          recommendDishes(meatTag);
-        }
-        return;
-      }
-
-      // Menu
-      if (
-        t.includes('menu') ||
-        t.includes('餐牌') ||
-        t.includes('菜單') ||
-        t.includes('list of food')
-      ) {
-        addBot(texts.menuText[currentLang]);
-        addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">FuShi Menu</a>');
-        return;
-      }
-
-      // 外賣
-      if (
-        t.includes('外賣') ||
-        t.includes('自取') ||
-        t.includes('外送') ||
-        t.includes('takeaway') ||
-        t.includes('take away') ||
-        t.includes('delivery') ||
-        t.includes('deliver') ||
-        t.includes('pick up') ||
-        t.includes('pickup')
-      ) {
-        addBot(texts.takeawayText[currentLang]);
-        addBotHTML(
-          '👉 <a href="https://fushi.softether.net/byod/byod.aspx?data=hwZVZ%2BqRSxraTV9YHWCRmw%3D%3D" target="_blank">Online Order</a>'
-        );
-        return;
-      }
-
-      // 打招呼
-      if (
-        t.includes('hi') ||
-        t.includes('hello') ||
-        t.includes('hey') ||
-        t.includes('哈囉') ||
-        t.includes('你好') ||
-        t.includes('早晨') ||
-        t.includes('午安') ||
-        t.includes('晚安')
-      ) {
-        addBot(
-          currentLang === 'zh'
-            ? '你好呀～我可以幫你訂位、到會／大量訂購、搵食或外賣，你可以直接問我。'
-            : 'Hello! I can help you with booking, catering / bulk orders, food suggestions or takeaway. Just ask me.'
-        );
-        return;
-      }
-
-      addBot(texts.fallback1[currentLang]);
-      addBot(texts.fallback2[currentLang]);
+    const reply = recommendDishes(meatTag);
+    addBot(reply);
+    if (isZh) {
+      addBot('如果啱心水，可以話我知「幫我落單」或者直接去 Online Order 平台。');
+    } else {
+      addBot('If you like any of them, tell me “place order” or go to the online order platform.');
     }
+  }
 
-    function flowEatToday() {
-      rsvForm.style.display = 'none';
-      cateringForm.style.display = 'none';
-      addBot(texts.eatAsk[currentLang]);
-      addBot(texts.eatReplyIntro[currentLang]);
-      addBot(texts.eatMenu[currentLang]);
-      addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">FuShi Menu</a>');
+  // ====== 其他 Flow（簡化版，可自行擴充） ======
+  function flowReservation() {
+    if (isZh) {
+      addBot('訂位方面，你可以話我知：日期、人數、大約時間，我會幫你整合資料，再交畀同事 WhatsApp 跟進。');
+    } else {
+      addBot('For reservation, please tell me date, number of guests and time, and our staff will follow up via WhatsApp.');
     }
+  }
 
-    function flowReservation() {
-      cateringForm.style.display = 'none';
-      addBot(texts.rsvAskPax[currentLang]);
-      addBot(texts.rsvFormIntro[currentLang]);
-      rsvForm.style.display = 'block';
+  function flowBulk() {
+    if (isZh) {
+      addBot('大量訂購方面，我可以先根據人數推介幾款套餐，之後再轉去 catering / bulk order 表單俾你揀。');
+    } else {
+      addBot('For bulk purchase, I can suggest some set menus based on headcount, then direct you to the bulk order form.');
     }
+  }
 
-    // 到會／大量訂購 Flow
-    function flowCateringBulk() {
-      rsvForm.style.display = 'none';
-      cateringForm.style.display = 'block';
-      addBot(texts.cateringIntro[currentLang]);
+  function flowCatering() {
+    if (isZh) {
+      addBot('到會服務可以經 FuShi Catering Menu 網站填表，我可以先 roughly 幫你揀幾款 menu，再交畀同事確認。');
+    } else {
+      addBot('For catering, please refer to the FuShi Catering Menu form; I can help you choose a tentative menu first.');
     }
+  }
 
-    function openWhatsAppWithReservation() {
-      const phone = '85264067605';
-
-      const pax = rsvPaxInput.value || '';
-      const date = rsvDateInput.value || '';
-      const time = rsvTimeInput.value || '';
-      const contact = rsvPhoneInput.value || '';
-
-      let msgZh = '我想喺「福食」訂位：\n';
-      msgZh += pax ? `人數：${pax}位\n` : '';
-      msgZh += date ? `日期：${date}\n` : '';
-      msgZh += time ? `時間：${time}\n` : '';
-      msgZh += contact ? `聯絡電話：${contact}\n` : '';
-      msgZh += '如果有位嘅話，麻煩幫我確認安排，唔該晒！';
-
-      let msgEn = 'I would like to make a booking at "Fushi":\n';
-      msgEn += pax ? `People: ${pax}\n` : '';
-      msgEn += date ? `Date: ${date}\n` : '';
-      msgEn += time ? `Time: ${time}\n` : '';
-      msgEn += contact ? `Contact number: ${contact}\n` : '';
-      msgEn += 'If a table is available, please help confirm the booking. Thank you!';
-
-      const text = currentLang === 'zh' ? msgZh : msgEn;
-      const url = `https://wa.me/85264067605?text=${encodeURIComponent(text)}`;
-      window.open(url, '_blank');
-
-      addBot(texts.rsvDone[currentLang]);
+  function flowOrder() {
+    if (isZh) {
+      addBot('你可以經線上點餐平台落單：［Online Order 連結］。如果想我先幫你揀菜，可以話我知「今日食咩好」。');
+    } else {
+      addBot('You can place order via our online ordering platform. If you want recommendations first, say “what to eat today”.');
     }
+  }
 
-    // 到會／大量訂購 WhatsApp
-    function openWhatsAppWithCatering() {
-      const phone = '85264067605';
-
-      const occ = catOccasionInput.value || '';
-      const pax = catPaxInput.value || '';
-      const date = catDateInput.value || '';
-      const time = catTimeInput.value || '';
-      const items = catItemsInput.value || '';
-      const contact = catContactInput.value || '';
-
-      let msgZh = '我想喺「福食」安排到會／大量訂購：\n';
-      msgZh += occ ? `用途：${occ}\n` : '';
-      msgZh += pax ? `人數／份量：約 ${pax}\n` : '';
-      msgZh += date ? `日期：${date}\n` : '';
-      msgZh += time ? `時間：${time}\n` : '';
-      msgZh += items ? `大約想要嘅套餐／菜式：${items}\n` : '';
-      msgZh += contact ? `聯絡人／電話：${contact}\n` : '';
-      msgZh += '麻煩幫我睇吓有咩套餐或建議，多謝！';
-
-      let msgEn = 'I would like to arrange catering / bulk order at "Fushi":\n';
-      msgEn += occ ? `Occasion: ${occ}\n` : '';
-      msgEn += pax ? `Number of people / quantity: about ${pax}\n` : '';
-      msgEn += date ? `Date: ${date}\n` : '';
-      msgEn += time ? `Time: ${time}\n` : '';
-      msgEn += items ? `Preferred sets / dishes: ${items}\n` : '';
-      msgEn += contact ? `Contact person / phone: ${contact}\n` : '';
-      msgEn += 'Please suggest suitable sets or options for us. Thank you!';
-
-      const text = currentLang === 'zh' ? msgZh : msgEn;
-      const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-      window.open(url, '_blank');
-
-      addBot(
-        currentLang === 'zh'
-          ? '已開啟 WhatsApp，稍後同事會再同你跟進到會／大量訂購安排 🙏'
-          : 'WhatsApp has been opened. Our team will follow up on your catering / bulk order shortly 🙏'
-      );
+  function flowFallback() {
+    if (isZh) {
+      addBot('我暫時未完全聽得明你嘅意思 😅');
+      addBot('你可以試吓咁問我：\n• 今日食咩好？\n• 我想食牛\n• 幫我訂位\n• 有冇大量訂購 / 到會？');
+    } else {
+      addBot("I'm not fully sure what you mean.");
+      addBot('You may try asking: what to eat today, I want beef, I need a reservation, any bulk purchase or catering.');
     }
+  }
 
-    rsvWaBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      openWhatsAppWithReservation();
-    });
+  // ====== 主處理 ======
+  function handleUserInput() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    addUser(text);
+    inputEl.value = '';
 
-    cateringWaBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      openWhatsAppWithCatering();
-    });
+    const intent = detectIntent(text);
+    console.log('intent =', intent);
 
-    function sendMessage() {
-      const value = input.value.trim();
-      if (!value) return;
-      input.value = '';
-      handleKeyword(value);
-    }
+    if (intent === 'eatToday') return flowEatToday(text);
+    if (intent === 'reservation') return flowReservation();
+    if (intent === 'bulk') return flowBulk();
+    if (intent === 'catering') return flowCatering();
+    if (intent === 'order') return flowOrder();
+    return flowFallback();
+  }
 
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
+  // ====== 綁定事件 ======
+  sendBtn.addEventListener('click', handleUserInput);
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleUserInput();
+  });
 
-    applyLanguage();
-    loadMenuFromSheet()
-      .then(() => {
-        welcome();
-      })
-      .catch(() => {
-        welcome();
-      });
-  </script>
+  langBtn.addEventListener('click', () => {
+    isZh = !isZh;
+    chatEl.innerHTML = '';
+    renderGreeting();
+  });
+
+  // ====== 初始化 ======
+  (async function init() {
+    await loadMenuFromSheet();   // 正式版改為真正 fetch
+    renderGreeting();
+  })();
+</script>
 </body>
 </html>
-
-

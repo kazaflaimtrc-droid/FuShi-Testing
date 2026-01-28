@@ -1,278 +1,310 @@
-// ====== Menu Data 由後端 API 載入 ======
-let menuData = [];
-let isZh = true;
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <title>福食小助手</title>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .chat-wrapper { max-width: 420px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; }
+    .chat-header { padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .chat-body { padding: 12px 16px; max-height: 520px; overflow-y: auto; }
+    .msg { margin-bottom: 8px; }
+    .msg-bot { color: #222; }
+    .msg-user { text-align: right; color: #0066cc; }
+    .input-row { border-top: 1px solid #eee; padding: 8px; display: flex; gap: 8px; }
+    .input-row input { flex: 1; padding: 6px 8px; }
+    .input-row button { padding: 6px 12px; }
+    a { color: #0066cc; text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="chat-wrapper">
+  <div class="chat-header">
+    <div>福食小助手</div>
+    <button id="langToggle">中文 / EN</button>
+  </div>
+  <div id="chat" class="chat-body"></div>
+  <div class="input-row">
+    <input id="userInput" placeholder="請話畀我知你嘅問題，例如：有咩好食、幫我訂位…" />
+    <button id="sendBtn">送出</button>
+  </div>
+</div>
 
-async function loadMenuFromSheet() {
-  const url = 'https://script.google.com/macros/s/你的-exec-URL/exec?type=menu';
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error('loadMenuFromSheet error', res.status, res.statusText);
+<script>
+  // ====== Menu Data from Google Sheet API ======
+  let menuData = [];
+  let isZh = true;
+
+  async function loadMenuFromSheet() {
+      const url = 'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu'; // ← 改成你 Web App exec URL
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.error('loadMenuFromSheet error', res.status, res.statusText);
+        return;
+      }
+      menuData = await res.json();
+      console.log('menu loaded, size =', menuData.length);
+    } catch (e) {
+      console.error('loadMenuFromSheet exception', e);
+    }
+  }
+
+  // ====== UI 基本 ======
+  const chatEl = document.getElementById('chat');
+  const inputEl = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const langBtn = document.getElementById('langToggle');
+
+  let hotKeyBar = null;
+
+  function addBot(text) {
+    const div = document.createElement('div');
+    div.className = 'msg msg-bot';
+    div.innerHTML = text;
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  function addUser(text) {
+    const div = document.createElement('div');
+    div.className = 'msg msg-user';
+    div.textContent = text;
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  // ====== Hot Keys ======
+  function renderHotKeys() {
+    if (!hotKeyBar) {
+      hotKeyBar = document.createElement('div');
+      hotKeyBar.style.marginTop = '8px';
+      hotKeyBar.style.display = 'flex';
+      hotKeyBar.style.flexWrap = 'wrap';
+      hotKeyBar.style.gap = '6px';
+      chatEl.appendChild(hotKeyBar);
+    } else {
+      hotKeyBar.innerHTML = '';
+    }
+
+    const keysZh = [
+      '今日食咩好',
+      '我想食牛',
+      '我想食雞',
+      '我想食豬',
+      '訂位',
+      '大量訂購',
+      '到會',
+      'Online order'
+    ];
+    const keysEn = [
+      'What to eat today',
+      'I want beef',
+      'I want chicken',
+      'I want pork',
+      'Reservation',
+      'Bulk purchase',
+      'Catering',
+      'Online order'
+    ];
+
+    const keys = isZh ? keysZh : keysEn;
+
+    keys.forEach(k => {
+      const btn = document.createElement('button');
+      btn.textContent = k;
+      btn.style.padding = '4px 8px';
+      btn.style.borderRadius = '12px';
+      btn.style.border = '1px solid #ddd';
+      btn.style.background = '#f7f7f7';
+      btn.style.cursor = 'pointer';
+      btn.onclick = () => {
+        inputEl.value = k;
+        handleUserInput();
+      };
+      hotKeyBar.appendChild(btn);
+    });
+
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  function renderGreeting() {
+    if (isZh) {
+      addBot('哈囉～歡迎嚟到「福食」！我係你嘅飲食小助手 😉');
+      addBot('你可以問：有咩好食、今日食咩好、幫我訂位、到會／大量訂購、外賣、有冇優惠等等。');
+      addBot('你而家最想我幫你做啲咩呢？');
+    } else {
+      addBot('Hi, welcome to FuShi! I am your dining assistant.');
+      addBot('You can ask: what to eat today, reservation, bulk purchase, catering, online order, promotions, etc.');
+    }
+    renderHotKeys();
+  }
+
+  // ====== Intent 判斷 ======
+  function detectIntent(text) {
+    const t = text.toLowerCase();
+
+    if (
+      t.includes('食咩好') ||
+      t.includes('有咩好食') ||
+      t.includes('有乜好食') ||
+      t.includes('recommend') ||
+      t.includes('推介') ||
+      t.includes('推薦') ||
+      t.includes('suggest') ||
+      t.includes('what to eat')
+    ) return 'eatToday';
+
+    if (t.includes('訂位') || t.includes('reservation') || t.includes('book a table'))
+      return 'reservation';
+
+    if (t.includes('大量訂購') || t.includes('bulk') || t.includes('corporate order'))
+      return 'bulk';
+
+    if (t.includes('到會') || t.includes('catering'))
+      return 'catering';
+
+    if (t.includes('外賣') || t.includes('online order') || t.includes('外送'))
+      return 'order';
+
+    return 'fallback';
+  }
+
+  // ====== 肉類 keyword ======
+  function chooseMeatTagFromText(text) {
+    const t = text.toLowerCase();
+    if (t.includes('牛') || t.includes('beef')) return 'Beef';
+    if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
+    if (t.includes('豬') || t.includes('pork')) return 'Pork';
+    if (t.includes('魚') || t.includes('seafood') || t.includes('sea food')) return 'Sea Food';
+    if (t.includes('素') || t.includes('vegan') || t.includes('vegetarian')) return 'Vegan';
+    return null;
+  }
+
+  // ====== 推薦菜式 ======
+  function recommendDishes(meatTag) {
+    console.log('recommendDishes meatTag =', meatTag);
+    const tag = meatTag.toLowerCase();
+
+    const list = menuData.filter(d => {
+      const m = (d.meat || '').toLowerCase();
+      if (tag === 'beef')     return m.includes('beef') || m.includes('牛');
+      if (tag === 'chicken')  return m.includes('chicken') || m.includes('雞');
+      if (tag === 'pork')     return m.includes('pork') || m.includes('豬');
+      if (tag === 'sea food') return m.includes('sea food') || m.includes('魚');
+      if (tag === 'vegan')    return m.includes('vegan') || m.includes('素');
+      return false;
+    });
+
+    console.log('recommended list size =', list.length);
+
+    if (list.length === 0) {
+      return isZh
+        ? '暫時未有符合條件嘅菜式，不如睇吓完整 FuShi Menu？'
+        : 'I could not find matching dishes for that choice. Please check the full FuShi Menu.';
+    }
+
+    const shuffled = list.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+    let lines;
+
+    if (isZh) {
+      lines = shuffled.map(d => `• ${d.item} - $${d.price}`);
+      return '我幫你喺餐牌揀咗幾款可能啱你嘅菜式：<br>' + lines.join('<br>');
+    } else {
+      lines = shuffled.map(d => `• ${d.item} - HKD ${d.price}`);
+      return 'Here are some dishes that may suit you:<br>' + lines.join('<br>');
+    }
+  }
+
+  // ====== 各 Flow ======
+  function flowEatToday(text) {
+    const meatTag = chooseMeatTagFromText(text);
+    if (!meatTag) {
+      if (isZh) addBot('今日有冇特別想食嘅肉類或海鮮呢？可以話我知：牛、雞、豬、魚、素。');
+      else addBot('Any preference today? Beef, chicken, pork, seafood or vegan?');
       return;
     }
-    menuData = await res.json();
-    console.log('menu loaded, size =', menuData.length);
-  } catch (e) {
-    console.error('loadMenuFromSheet exception', e);
-  }
-}
-
-// ====== UI 基本 ======
-const chatEl = document.getElementById('chat');
-const inputEl = document.getElementById('userInput');
-const sendBtn = document.getElementById('sendBtn');
-const langBtn = document.getElementById('langToggle');
-
-// Hot key 容器
-let hotKeyBar = null;
-
-function addBot(text) {
-  const div = document.createElement('div');
-  div.className = 'msg msg-bot';
-  div.innerHTML = text;
-  chatEl.appendChild(div);
-  chatEl.scrollTop = chatEl.scrollHeight;
-}
-
-function addUser(text) {
-  const div = document.createElement('div');
-  div.className = 'msg msg-user';
-  div.textContent = text;
-  chatEl.appendChild(div);
-  chatEl.scrollTop = chatEl.scrollHeight;
-}
-
-// 建 hot key bar
-function renderHotKeys() {
-  if (!hotKeyBar) {
-    hotKeyBar = document.createElement('div');
-    hotKeyBar.style.marginTop = '8px';
-    hotKeyBar.style.display = 'flex';
-    hotKeyBar.style.flexWrap = 'wrap';
-    hotKeyBar.style.gap = '6px';
-    chatEl.appendChild(hotKeyBar);
-  } else {
-    hotKeyBar.innerHTML = '';
+    const reply = recommendDishes(meatTag);
+    addBot(reply);
   }
 
-  const keysZh = [
-    '今日食咩好',
-    '我想食牛',
-    '我想食雞',
-    '我想食豬',
-    '訂位',
-    '大量訂購',
-    '到會',
-    'Online Order'
-  ];
-  const keysEn = [
-    'What to eat today',
-    'I want beef',
-    'I want chicken',
-    'I want pork',
-    'Reservation',
-    'Bulk purchase',
-    'Catering',
-    'Online order'
-  ];
+  function flowReservation() {
+    if (isZh) {
+      addBot('訂位方面，你可以填呢份表：<a href="https://YOUR_RESERVATION_FORM_URL" target="_blank">訂位表格</a>。');
+    } else {
+      addBot('For reservation, please fill this form: <a href="https://YOUR_RESERVATION_FORM_URL" target="_blank">Reservation form</a>.');
+    }
+  }
 
-  const keys = isZh ? keysZh : keysEn;
+  function flowBulk() {
+    if (isZh) {
+      addBot('大量訂購可以用呢份表：<a href="https://YOUR_BULK_FORM_URL" target="_blank">大量訂購表格</a>。');
+    } else {
+      addBot('For bulk purchase, please use this form: <a href="https://YOUR_BULK_FORM_URL" target="_blank">Bulk order form</a>.');
+    }
+  }
 
-  keys.forEach(k => {
-    const btn = document.createElement('button');
-    btn.textContent = k;
-    btn.style.padding = '4px 8px';
-    btn.style.borderRadius = '12px';
-    btn.style.border = '1px solid #ddd';
-    btn.style.background = '#f7f7f7';
-    btn.style.cursor = 'pointer';
-    btn.onclick = () => {
-      inputEl.value = k;
-      handleUserInput();
-    };
-    hotKeyBar.appendChild(btn);
+  function flowCatering() {
+    if (isZh) {
+      addBot('到會可以去呢度揀餐單同填資料：<a href="https://YOUR_CATERING_FORM_URL" target="_blank">到會表格</a>。');
+    } else {
+      addBot('For catering, please go here: <a href="https://YOUR_CATERING_FORM_URL" target="_blank">Catering form</a>.');
+    }
+  }
+
+  function flowOrder() {
+    const orderUrl = 'https://fushi.softether.net/byod/byod.aspx?data=hwZVZ2BqRSxraTV9YHWCRmw3D3D';
+    if (isZh) {
+      addBot('你可以經線上點餐平台落單：<a href="' + orderUrl + '" target="_blank">Online Order</a>。');
+    } else {
+      addBot('You can place order via: <a href="' + orderUrl + '" target="_blank">Online Order</a>.');
+    }
+  }
+
+  function flowFallback() {
+    if (isZh) {
+      addBot('我暫時未完全聽得明你嘅意思 😅');
+      addBot('你可以試吓撳下面啲快捷鍵，例如：今日食咩好、我想食牛、訂位、大量訂購、到會。');
+    } else {
+      addBot("I'm not fully sure what you mean 😅");
+    }
+  }
+
+  // ====== 主處理 ======
+  function handleUserInput() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    addUser(text);
+    inputEl.value = '';
+
+    const intent = detectIntent(text);
+    console.log('intent =', intent);
+
+    if (intent === 'eatToday')    return flowEatToday(text);
+    if (intent === 'reservation') return flowReservation();
+    if (intent === 'bulk')        return flowBulk();
+    if (intent === 'catering')    return flowCatering();
+    if (intent === 'order')       return flowOrder();
+    return flowFallback();
+  }
+
+  // ====== 事件 & 初始化 ======
+  sendBtn.addEventListener('click', handleUserInput);
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleUserInput();
   });
 
-  chatEl.scrollTop = chatEl.scrollHeight;
-}
-
-function renderGreeting() {
-  if (isZh) {
-    addBot('哈囉～歡迎嚟到「福食」！我係你嘅飲食小助手 😉');
-    addBot('你可以問：有咩好食、今日食咩好、幫我訂位、到會／大量訂購、外賣、有冇優惠等等。');
-    addBot('你而家最想我幫你做啲咩呢？');
-  } else {
-    addBot('Hi, welcome to FuShi! I am your dining assistant.');
-    addBot('You can ask: what to eat today, reservation, bulk purchase, catering, online order, promotions, etc.');
-  }
-  renderHotKeys();
-}
-
-// ====== Intent 判斷 ======
-function detectIntent(text) {
-  const t = text.toLowerCase();
-
-  if (
-    t.includes('食咩好') ||
-    t.includes('有咩好食') ||
-    t.includes('有乜好食') ||
-    t.includes('recommend') ||
-    t.includes('推介') ||
-    t.includes('推薦') ||
-    t.includes('suggest') ||
-    t.includes('what to eat')
-  ) return 'eatToday';
-
-  if (t.includes('訂位') || t.includes('reservation') || t.includes('book a table'))
-    return 'reservation';
-
-  if (t.includes('大量訂購') || t.includes('bulk') || t.includes('corporate order'))
-    return 'bulk';
-
-  if (t.includes('到會') || t.includes('catering'))
-    return 'catering';
-
-  if (t.includes('外賣') || t.includes('online order') || t.includes('外送'))
-    return 'order';
-
-  return 'fallback';
-}
-
-// 肉類 keyword
-function chooseMeatTagFromText(text) {
-  const t = text.toLowerCase();
-  if (t.includes('牛') || t.includes('beef')) return 'Beef';
-  if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
-  if (t.includes('豬') || t.includes('pork')) return 'Pork';
-  if (t.includes('魚') || t.includes('seafood') || t.includes('sea food')) return 'Sea Food';
-  if (t.includes('素') || t.includes('vegan') || t.includes('vegetarian')) return 'Vegan';
-  return null;
-}
-
-// ====== 推薦菜式 ======
-function recommendDishes(meatTag) {
-  console.log('recommendDishes meatTag =', meatTag);
-  const tag = meatTag.toLowerCase();
-
-  const list = menuData.filter(d => {
-    const m = (d.meat || '').toLowerCase();
-    if (tag === 'beef')     return m.includes('beef') || m.includes('牛');
-    if (tag === 'chicken')  return m.includes('chicken') || m.includes('雞');
-    if (tag === 'pork')     return m.includes('pork') || m.includes('豬');
-    if (tag === 'sea food') return m.includes('sea food') || m.includes('魚');
-    if (tag === 'vegan')    return m.includes('vegan') || m.includes('素');
-    return false;
+  langBtn.addEventListener('click', () => {
+    isZh = !isZh;
+    chatEl.innerHTML = '';
+    hotKeyBar = null;
+    renderGreeting();
   });
 
-  console.log('recommended list size =', list.length);
-
-  if (list.length === 0) {
-    return isZh
-      ? '暫時未有符合條件嘅菜式，不如睇吓完整 FuShi Menu？'
-      : 'I could not find matching dishes for that choice. Please check the full FuShi Menu.';
-  }
-
-  const shuffled = list.slice().sort(() => Math.random() - 0.5).slice(0, 3);
-  let lines;
-
-  if (isZh) {
-    lines = shuffled.map(d => `• ${d.item} - $${d.price}`);
-    return '我幫你喺餐牌揀咗幾款可能啱你嘅菜式：<br>' + lines.join('<br>');
-  } else {
-    lines = shuffled.map(d => `• ${d.item} - HKD ${d.price}`);
-    return 'Here are some dishes that may suit you:<br>' + lines.join('<br>');
-  }
-}
-
-// ====== 各 Flow ======
-function flowEatToday(text) {
-  const meatTag = chooseMeatTagFromText(text);
-  if (!meatTag) {
-    if (isZh) addBot('今日有冇特別想食嘅肉類或海鮮呢？可以話我知：牛、雞、豬、魚、素。');
-    else addBot('Any preference today? Beef, chicken, pork, seafood or vegan?');
-    return;
-  }
-  const reply = recommendDishes(meatTag);
-  addBot(reply);
-}
-
-function flowReservation() {
-  if (isZh) {
-    addBot('訂位方面，你可以填呢份 form：<a href="https://你原本用開嘅訂位Form" target="_blank">訂位表格</a>。');
-  } else {
-    addBot('For reservation, please fill this form: <a href="https://你原本用開嘅訂位Form" target="_blank">Reservation form</a>.');
-  }
-}
-
-function flowBulk() {
-  if (isZh) {
-    addBot('大量訂購可以用呢份表：<a href="https://你原本用開嘅BulkForm" target="_blank">大量訂購表格</a>。');
-  } else {
-    addBot('For bulk purchase, please use this form: <a href="https://你原本用開嘅BulkForm" target="_blank">Bulk order form</a>.');
-  }
-}
-
-function flowCatering() {
-  if (isZh) {
-    addBot('到會可以去呢度揀餐單同填資料：<a href="https://你原本用開嘅CateringForm" target="_blank">到會表格</a>。');
-  } else {
-    addBot('For catering, please go here: <a href="https://你原本用開嘅CateringForm" target="_blank">Catering form</a>.');
-  }
-}
-
-function flowOrder() {
-  if (isZh) {
-    addBot('你可以經線上點餐平台落單：<a href="https://fushi.softether.net/byod/byod.aspx?data=hwZVZ2BqRSxraTV9YHWCRmw3D3D" target="_blank">Online Order</a>。');
-  } else {
-    addBot('You can place order via: <a href="https://fushi.softether.net/byod/byod.aspx?data=hwZVZ2BqRSxraTV9YHWCRmw3D3D" target="_blank">Online Order</a>.');
-  }
-}
-
-function flowFallback() {
-  if (isZh) {
-    addBot('我暫時未完全聽得明你嘅意思 😅');
-    addBot('你可以試吓撳下面啲快捷鍵，例如：今日食咩好、我想食牛、訂位、大量訂購、到會。');
-  } else {
-    addBot("I'm not fully sure what you mean 😅");
-  }
-}
-
-// ====== 主處理 ======
-function handleUserInput() {
-  const text = inputEl.value.trim();
-  if (!text) return;
-  addUser(text);
-  inputEl.value = '';
-
-  const intent = detectIntent(text);
-  console.log('intent =', intent);
-
-  if (intent === 'eatToday')   return flowEatToday(text);
-  if (intent === 'reservation') return flowReservation();
-  if (intent === 'bulk')       return flowBulk();
-  if (intent === 'catering')   return flowCatering();
-  if (intent === 'order')      return flowOrder();
-  return flowFallback();
-}
-
-// ====== 事件 & 初始化 ======
-sendBtn.addEventListener('click', handleUserInput);
-inputEl.addEventListener('keydown', e => {
-  if (e.key === 'Enter') handleUserInput();
-});
-
-langBtn.addEventListener('click', () => {
-  isZh = !isZh;
-  chatEl.innerHTML = '';
-  hotKeyBar = null;
-  renderGreeting();
-});
-
-(async function init() {
-  await loadMenuFromSheet();
-  renderGreeting();
-})();
-
+  (async function init() {
+    await loadMenuFromSheet();
+    renderGreeting();
+  })();
+</script>
 </body>
 </html>
-

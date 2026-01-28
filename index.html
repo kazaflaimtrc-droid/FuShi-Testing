@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>福食飲食小助手</title>
+  <title>福食小助手</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -224,6 +224,8 @@
     let menuData = [];
 
     async function loadMenuFromSheet() {
+      console.log('loadMenuFromSheet called'); 
+      
       const sheetId = '1ttd8WfW8V-5JwTv9-aTWlji1qW8N3f2jUjO13zMqtqc';
       const sheetName = 'FullMenu';
 
@@ -233,6 +235,7 @@
       try {
         const res = await fetch(url);
         const csv = await res.text();
+        console.log('csv length =', csv.length);
 
         const rows = csv.split('\n').map(r => r.trim()).filter(r => r);
         const dataRows = rows.slice(1);
@@ -736,3 +739,4 @@
   </script>
 </body>
 </html>
+

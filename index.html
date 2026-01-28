@@ -220,48 +220,55 @@
 
     let currentLang = 'zh'; // 'zh' or 'en'
 
-    // ====== Menu Data：由 Apps Script Web App 載入 JSON ======
-    let menuData = [];
+// ====== Menu Data：由 Google Sheet CSV 載入 ======
+let menuData = [];
 
-    async function loadMenuFromSheet() {
-      // 用你提供嘅 Web App URL（已包含 ?type=menu）
-      const url = 'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
+async function loadMenuFromSheet() {
+  const sheetId = '1ttd8WfW8V-5JwTv9-aTWlji1qW8N3f2jUjO13zMqtqc';   // 你個 FU Shi Testing
+  const sheetName = 'FullMenu';                                // menu 個 tab 名
 
-      try {
-        const res = await fetch(url);
-        if (!res.ok) {
-          console.error('loadMenuFromSheet error', res.status, res.statusText);
-          addBot(
-            currentLang === 'zh'
-              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-              : 'There was an issue loading the live menu.'
-          );
-          return;
-        }
-        const raw = await res.json(); // 後端：{period,item,meat,price}
+  const url =
+    `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 
-        menuData = raw.map(r => ({
-          period: r.period || 'All Day',
-          nameZh: r.item || '',
-          nameEn: r.item || '',
-          meat: r.meat || '',
-          price: Number(r.price || 0)
-        }));
-
-        addBot(
-          currentLang === 'zh'
-            ? '已從餐牌載入最新菜式資料 ✅'
-            : 'Latest menu data loaded from Google Sheet ✅'
-        );
-      } catch (err) {
-        console.error(err);
-        addBot(
-          currentLang === 'zh'
-            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-            : 'There was an issue loading the live menu.'
-        );
-      }
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error('loadMenuFromSheet error', res.status, res.statusText);
+      addBot(
+        currentLang === 'zh'
+          ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+          : 'There was an issue loading the live menu.'
+      );
+      return;
     }
+
+    const csv = await res.text();
+    const rows = csv.split('\n').map(r => r.trim()).filter(r => r);
+    const dataRows = rows.slice(1); // 略過標題行
+
+    menuData = dataRows
+      .map(line => line.split(','))
+      .filter(cols => cols.length >= 4)
+      .map(cols => {
+        const period = cols[0] ? cols[0].trim() : 'All Day';
+        const item   = cols[1] ? cols[1].trim() : '';
+        const meat   = cols[2] ? cols[2].trim() : '';
+        const price  = cols[3] ? Number(cols[3].trim()) : 0;
+
+        return {
+          period: period || 'All Day',
+          nameZh: item,
+          nameEn: item,
+          meat: meat,
+          price: price
+        };
+      });
+
+    console.log('menuData sample', menuData[0]);
+  } catch (err) {
+    console.error('loadMenuFromSheet exception', err);
+  }
+}
 
     const texts = {
       title: {
@@ -728,3 +735,4 @@
   </script>
 </body>
 </html>
+

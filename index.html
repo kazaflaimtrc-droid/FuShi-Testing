@@ -80,23 +80,28 @@
     .input-area button:hover {
       background: #218838;
     }
-    #reservationForm {
+    #reservationForm,
+    #bulkForm {
       font-size: 13px;
       border-top: 1px solid #eee;
       margin-top: 6px;
       padding-top: 4px;
     }
-    #reservationForm label {
+    #reservationForm label,
+    #bulkForm label {
       display: inline-block;
-      width: 90px;
+      width: 110px;
     }
-    #reservationForm input {
+    #reservationForm input,
+    #bulkForm input,
+    #bulkForm textarea {
       font-size: 13px;
       padding: 3px 5px;
       border-radius: 4px;
       border: 1px solid #ccc;
     }
-    #rsvWaBtn {
+    #rsvWaBtn,
+    #bulkWaBtn {
       margin-top: 4px;
       padding: 4px 8px;
       font-size: 13px;
@@ -106,11 +111,17 @@
       color: #fff;
       cursor: pointer;
     }
-    #rsvWaBtn:hover {
+    #rsvWaBtn:hover,
+    #bulkWaBtn:hover {
       background: #1ebe57;
     }
     a {
       color: #007bff;
+    }
+    #bulkForm textarea {
+      width: 100%;
+      min-height: 40px;
+      resize: vertical;
     }
   </style>
 </head>
@@ -123,7 +134,7 @@
 
     <div id="chat" class="chat-window"></div>
 
-    <!-- 訂位資料表單（只係訂位 Flow 會用到） -->
+    <!-- 訂位資料表單 -->
     <div id="reservationForm" style="display:none;">
       <div style="margin-bottom:4px;">
         <label>人數 / People：</label>
@@ -143,6 +154,37 @@
       </div>
       <button id="rsvWaBtn">
         用 WhatsApp 傳送訂位資料 / Send booking via WhatsApp
+      </button>
+    </div>
+
+    <!-- 大量訂購表單 -->
+    <div id="bulkForm" style="display:none;">
+      <div style="margin-bottom:4px;">
+        <label>用途 / Occasion：</label>
+        <input id="bulkOccasion" type="text" placeholder="公司活動 / 生日會...">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>人數 / 份量：</label>
+        <input id="bulkPax" type="text" placeholder="例如：20人 / 30盒飯">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>日期 / Date：</label>
+        <input id="bulkDate" type="date">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>時間 / Time：</label>
+        <input id="bulkTime" type="time">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>簡單菜式 / Set：</label>
+        <textarea id="bulkItems" placeholder="例如：到會A套餐 x2, B套餐 x1"></textarea>
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>聯絡人 / 電話：</label>
+        <input id="bulkContact" type="text" placeholder="Mr Chan 9xxxxxxx">
+      </div>
+      <button id="bulkWaBtn">
+        用 WhatsApp 傳送大量訂購資料 / Send bulk order via WhatsApp
       </button>
     </div>
 
@@ -167,15 +209,23 @@
     const rsvPhoneInput = document.getElementById('rsvPhone');
     const rsvWaBtn = document.getElementById('rsvWaBtn');
 
+    const bulkForm = document.getElementById('bulkForm');
+    const bulkOccasionInput = document.getElementById('bulkOccasion');
+    const bulkPaxInput = document.getElementById('bulkPax');
+    const bulkDateInput = document.getElementById('bulkDate');
+    const bulkTimeInput = document.getElementById('bulkTime');
+    const bulkItemsInput = document.getElementById('bulkItems');
+    const bulkContactInput = document.getElementById('bulkContact');
+    const bulkWaBtn = document.getElementById('bulkWaBtn');
+
     let currentLang = 'zh'; // 'zh' or 'en'
 
     // ====== Menu Data：由 Google Sheet CSV 載入 ======
     let menuData = [];
 
-    // 從 Google Sheet 載入 CSV 並轉成 menuData
     async function loadMenuFromSheet() {
       const sheetId = '1ttd8WfW8V-5JwTv9-aTWlji1qW8N3f2jUjO13zMqtqc';
-      const sheetName = 'FullMenu'; // 同你底部 Tab 名完全一樣
+      const sheetName = 'FullMenu';
 
       const url =
         `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
@@ -185,7 +235,6 @@
         const csv = await res.text();
 
         const rows = csv.split('\n').map(r => r.trim()).filter(r => r);
-        // 第一行假設係標題：Available Period,Item,Meat,Price
         const dataRows = rows.slice(1);
 
         menuData = dataRows
@@ -252,9 +301,8 @@
       },
       fallback2: {
         zh: '你可以問我：訂位、到會、大量訂購、今日食咩好、外賣、餐牌或者有冇優惠。',
-        en: 'You can ask about: booking, catering / group orders, what to eat, takeaway, menu or promotions.'
+        en: 'You can ask about: booking, catering / bulk orders, what to eat, takeaway, menu or promotions.'
       },
-      // 食咩好
       eatAsk: {
         zh: '今日有冇特別想食嘅肉類或海鮮呢？例如：牛、雞、豬、海鮮、素食～你可以打「想食牛」「chicken」等。',
         en: 'Any preference today? For example: beef, chicken, pork, seafood or vegan. You can type "want beef", "chicken", etc.'
@@ -267,7 +315,6 @@
         zh: '你亦可以自己睇電子餐牌：',
         en: 'You can also browse the e-menu yourself:'
       },
-      // 訂位
       rsvAskPax: {
         zh: '好嘢！等我幫你留個靚位先～請問大約幾多位呢？你可以直接話「4位」、「6位」咁樣。',
         en: 'Great! Let me help you reserve a table. Roughly how many people? You can type "4 people", "6 pax"...'
@@ -284,7 +331,6 @@
         zh: '用 WhatsApp 傳送訂位資料',
         en: 'Send booking via WhatsApp'
       },
-      // 到會
       catAskType: {
         zh: '打算搞活動？「福食」到會服務最啱晒～你可以打：公司聚餐、生日派對、家庭聚會，或者其他類型。',
         en: 'Planning an event? Our catering service may be perfect. You can type: company event, birthday party, family gathering or others.'
@@ -301,7 +347,6 @@
         zh: '如果你想落訂，可以之後用 WhatsApp send 比我哋：講返套餐、日期時間、地址同聯絡電話。',
         en: 'If you want to place an order, you can later send us the package, date & time, address and contact number via WhatsApp.'
       },
-      // Menu / 外賣 / 優惠
       menuText: {
         zh: '你可以喺度睇我哋電子菜單：',
         en: 'You can view our e-menu here:'
@@ -351,7 +396,6 @@
       return text.toLowerCase().trim();
     }
 
-    // 語言切換
     langBtn.addEventListener('click', () => {
       currentLang = currentLang === 'zh' ? 'en' : 'zh';
       applyLanguage();
@@ -362,21 +406,19 @@
       );
     });
 
-    // 歡迎
     function welcome() {
       chat.innerHTML = '';
       addBot(texts.welcome1[currentLang]);
       addBot(texts.welcome2[currentLang]);
       addBot(texts.askMain[currentLang]);
       rsvForm.style.display = 'none';
+      bulkForm.style.display = 'none';
     }
 
-    // 價錢格式
     function formatPrice(price) {
       return `HK$${price}`;
     }
 
-    // 根據肉類 + 時段推介菜式（用 menuData）
     function recommendDishes(meatTag) {
       if (!menuData || menuData.length === 0) {
         addBot(
@@ -452,7 +494,7 @@
       const t = normalize(raw);
       addUser(raw);
 
-      // 訂位 / Booking
+      // 訂位
       if (
         t.includes('訂位') ||
         t.includes('訂枱') ||
@@ -467,23 +509,31 @@
         return;
       }
 
-      // 到會 / Catering / Group order
+      // 大量訂購 / bulk order
+      if (
+        t.includes('大量訂購') ||
+        t.includes('bulk order') ||
+        (t.includes('group') && t.includes('order')) ||
+        t.includes('大單') ||
+        t.includes('大量') && t.includes('訂購')
+      ) {
+        flowBulk();
+        return;
+      }
+
+      // 到會 / catering
       if (
         t.includes('到會') ||
-        t.includes('大量訂購') ||
-        t.includes('大量 訂購') ||
         t.includes('派對餐') ||
         (t.includes('party') && t.includes('food')) ||
         t.includes('catering') ||
-        t.includes('bulk order') ||
-        t.includes('office catering') ||
-        (t.includes('group') && t.includes('order'))
+        t.includes('office catering')
       ) {
         flowCatering();
         return;
       }
 
-      // 優惠 / Promotion
+      // 優惠
       if (
         t.includes('prom') ||
         t.includes('promo') ||
@@ -501,7 +551,7 @@
         return;
       }
 
-      // 今日食咩好 / what to eat
+      // 今日食咩好
       if (
         t.includes('今日食咩好') ||
         t.includes('食咩好') ||
@@ -526,7 +576,7 @@
         return;
       }
 
-      // Menu / 餐牌
+      // Menu
       if (
         t.includes('menu') ||
         t.includes('餐牌') ||
@@ -538,7 +588,7 @@
         return;
       }
 
-      // 外賣 / Takeaway
+      // 外賣
       if (
         t.includes('外賣') ||
         t.includes('自取') ||
@@ -557,7 +607,7 @@
         return;
       }
 
-      // 打招呼 / Greeting
+      // 打招呼
       if (
         t.includes('hi') ||
         t.includes('hello') ||
@@ -570,36 +620,35 @@
       ) {
         addBot(
           currentLang === 'zh'
-            ? '你好呀～我可以幫你訂位、到會、搵食或外賣，你可以直接問我。'
-            : 'Hello! I can help you with booking, catering, food suggestions or takeaway. Just ask me.'
+            ? '你好呀～我可以幫你訂位、到會、大量訂購、搵食或外賣，你可以直接問我。'
+            : 'Hello! I can help you with booking, catering, bulk orders, food suggestions or takeaway. Just ask me.'
         );
         return;
       }
 
-      // fallback
       addBot(texts.fallback1[currentLang]);
       addBot(texts.fallback2[currentLang]);
     }
 
-    // Flow：今日食咩好
     function flowEatToday() {
       rsvForm.style.display = 'none';
+      bulkForm.style.display = 'none';
       addBot(texts.eatAsk[currentLang]);
       addBot(texts.eatReplyIntro[currentLang]);
       addBot(texts.eatMenu[currentLang]);
       addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">FuShi Menu</a>');
     }
 
-    // Flow：訂位（顯示 form）
     function flowReservation() {
+      bulkForm.style.display = 'none';
       addBot(texts.rsvAskPax[currentLang]);
       addBot(texts.rsvFormIntro[currentLang]);
       rsvForm.style.display = 'block';
     }
 
-    // Flow：到會
     function flowCatering() {
       rsvForm.style.display = 'none';
+      bulkForm.style.display = 'none';
       addBot(texts.catAskType[currentLang]);
       addBot(texts.catAskPax[currentLang]);
       addBot(texts.catMenu[currentLang]);
@@ -607,7 +656,17 @@
       addBot(texts.catHint[currentLang]);
     }
 
-    // 一鍵開 WhatsApp，帶訂位草稿
+    // 大量訂購 Flow
+    function flowBulk() {
+      rsvForm.style.display = 'none';
+      bulkForm.style.display = 'block';
+      addBot(
+        currentLang === 'zh'
+          ? '好呀～大量訂購我哋可以幫你安排。請先填下面幾項基本資料，之後一撳就會開 WhatsApp 傳送俾我哋。'
+          : 'Great! We can help with bulk orders. Please fill in the basic details below and click the button to send us a WhatsApp message.'
+      );
+    }
+
     function openWhatsAppWithReservation() {
       const phone = '85264067605';
 
@@ -637,9 +696,54 @@
       addBot(texts.rsvDone[currentLang]);
     }
 
+    // 大量訂購 WhatsApp
+    function openWhatsAppWithBulkOrder() {
+      const phone = '85264067605';
+
+      const occ = bulkOccasionInput.value || '';
+      const pax = bulkPaxInput.value || '';
+      const date = bulkDateInput.value || '';
+      const time = bulkTimeInput.value || '';
+      const items = bulkItemsInput.value || '';
+      const contact = bulkContactInput.value || '';
+
+      let msgZh = '我想喺「福食」做大量訂購：\n';
+      msgZh += occ ? `用途：${occ}\n` : '';
+      msgZh += pax ? `人數／份量：約 ${pax}\n` : '';
+      msgZh += date ? `日期：${date}\n` : '';
+      msgZh += time ? `時間：${time}\n` : '';
+      msgZh += items ? `大約想要嘅套餐／菜式：${items}\n` : '';
+      msgZh += contact ? `聯絡人／電話：${contact}\n` : '';
+      msgZh += '麻煩幫我睇吓有咩套餐或建議，多謝！';
+
+      let msgEn = 'I would like to place a bulk order at "Fushi":\n';
+      msgEn += occ ? `Occasion: ${occ}\n` : '';
+      msgEn += pax ? `Number of people / quantity: about ${pax}\n` : '';
+      msgEn += date ? `Date: ${date}\n` : '';
+      msgEn += time ? `Time: ${time}\n` : '';
+      msgEn += items ? `Preferred sets / dishes: ${items}\n` : '';
+      msgEn += contact ? `Contact person / phone: ${contact}\n` : '';
+      msgEn += 'Please suggest suitable sets or options for us. Thank you!';
+
+      const text = currentLang === 'zh' ? msgZh : msgEn;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+
+      addBot(
+        currentLang === 'zh'
+          ? '已開啟 WhatsApp，稍後同事會再同你跟進大量訂購安排 🙏'
+          : 'WhatsApp has been opened. Our team will follow up on your bulk order shortly 🙏'
+      );
+    }
+
     rsvWaBtn.addEventListener('click', (e) => {
       e.preventDefault();
       openWhatsAppWithReservation();
+    });
+
+    bulkWaBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openWhatsAppWithBulkOrder();
     });
 
     function sendMessage() {
@@ -657,7 +761,6 @@
       }
     });
 
-    // 初始化：先設定語言，再載入 menu，再 welcome
     applyLanguage();
     loadMenuFromSheet()
       .then(() => {

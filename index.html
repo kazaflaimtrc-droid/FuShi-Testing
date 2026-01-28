@@ -31,21 +31,25 @@
 </div>
 
 <script>
-  // ====== 基本資料（Menu 從後端載入） ======
+  // ====== Menu Data 由後端 API 載入 ======
   let menuData = [];    // [{period, item, meat, price}, ...]
   let isZh = true;
 
-  // Demo：正式用時，改為從 Google Apps Script 端點載入
-async function loadMenuFromSheet() {
-  const url = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLjRk76Cv1SUahaCV2VTfnAUPH7pOkQEOVxdJJLGkhXb03hfLH6nNNX6i_-5ZMVDgaf9LuMpiEI-f8fShwntwCyy0fjeyZuDD3yC_K9UA8ovhZ81VXpJ0KVaVgoM4sAaFPsaZfT7J7ktw4s0N-ncuGcd-I5UGoJduQUZLFTKZ0bxBtDzFn2BfyuaI4NK98oCKaUd0i2iKkE9WLl-DJkts4aOf95h8_nnYgqTPEwdZ-CROWZh_5viNU9jAH9ojRoJG98ZG9hKgifbWwpt5P_i7A6PTAUEztugP-4mKSakwLmqAENDMfU&lib=M6zE5uGH_-MjnpuxBbUD7FtaNBYDonqKF';
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.error('loadMenuFromSheet error', res.status, res.statusText);
-    return;
+  // 用 Apps Script Web App API 讀 Google Sheet
+  async function loadMenuFromSheet() {
+    const url = 'https://script.google.com/macros/s/你的-exec-URL/exec?type=menu'; // <-- 改成你實際 Web App URL
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.error('loadMenuFromSheet error', res.status, res.statusText);
+        return;
+      }
+      menuData = await res.json();
+      console.log('menu loaded, size =', menuData.length);
+    } catch (e) {
+      console.error('loadMenuFromSheet exception', e);
+    }
   }
-  menuData = await res.json();
-  console.log('menu loaded, size =', menuData.length);
-}
 
   // ====== UI 基本 ======
   const chatEl = document.getElementById('chat');
@@ -56,7 +60,7 @@ async function loadMenuFromSheet() {
   function addBot(text) {
     const div = document.createElement('div');
     div.className = 'msg msg-bot';
-    div.textContent = text;
+    div.innerHTML = text;          // 用 innerHTML 支援 <br>
     chatEl.appendChild(div);
     chatEl.scrollTop = chatEl.scrollHeight;
   }
@@ -74,11 +78,11 @@ async function loadMenuFromSheet() {
       addBot('哈囉～歡迎嚟到「福食」！我係你嘅飲食小助手 😉');
       addBot('你可以好自然咁問我，例如：有咩好食、今日食咩好、幫我訂位、到會／大量訂購、外賣、有冇優惠等等。');
       addBot('你而家最想我幫你做啲咩呢？');
-      addBot('暫時未有符合條件嘅菜式，可以睇吓完整餐牌： FuShi Menu（放返網址）');
-      addBot('你可以打：我想食牛、想訂位、到會、大量訂購、今日有咩推介 等等。');
+      addBot('如果暫時未諗到，要睇完整餐牌可以撳：<a href="https://heyzine.com/flip-book/FuShiMenu" target="_blank">FuShi Menu</a>');
+      addBot('你可以試吓咁問我：我想食牛、今日食咩好、幫我訂位、大量訂購、到會 等等。');
     } else {
       addBot('Hi, welcome to FuShi! I am your dining assistant.');
-      addBot('You can ask things like: what to eat today, recommendations, make a reservation, bulk purchase, catering, promotions, etc.');
+      addBot('You can ask things like: what to eat today, recommendations, reservation, bulk purchase, catering, promotions, etc.');
       addBot('What can I help you with now?');
     }
   }
@@ -87,7 +91,6 @@ async function loadMenuFromSheet() {
   function detectIntent(text) {
     const t = text.toLowerCase();
 
-    // 食咩好 / 推薦
     if (
       t.includes('食咩好') ||
       t.includes('有咩好食') ||
@@ -101,22 +104,18 @@ async function loadMenuFromSheet() {
       return 'eatToday';
     }
 
-    // 訂位
     if (t.includes('訂位') || t.includes('reservation') || t.includes('book a table')) {
       return 'reservation';
     }
 
-    // 大量訂購 / Bulk
     if (t.includes('大量訂購') || t.includes('bulk') || t.includes('corporate order')) {
       return 'bulk';
     }
 
-    // 到會 / Catering
     if (t.includes('到會') || t.includes('catering')) {
       return 'catering';
     }
 
-    // 線上落單
     if (t.includes('外賣') || t.includes('外送') || t.includes('online order')) {
       return 'order';
     }
@@ -124,7 +123,7 @@ async function loadMenuFromSheet() {
     return 'fallback';
   }
 
-  // 從句子中抽肉類（中文＋英）
+  // 從句子中抽肉類（中＋英）
   function chooseMeatTagFromText(text) {
     const t = text.toLowerCase();
 
@@ -137,18 +136,20 @@ async function loadMenuFromSheet() {
     return null;
   }
 
-  // ====== 推薦菜式 ======
-function recommendDishes(meatTag) {
-  const tag = meatTag.toLowerCase();
-  const list = menuData.filter(d => {
-    const m = (d.meat || '').toLowerCase();
-    if (tag === 'beef')     return m.includes('beef') || m.includes('牛');
-    if (tag === 'chicken')  return m.includes('chicken') || m.includes('雞');
-    if (tag === 'pork')     return m.includes('pork') || m.includes('豬');
-    if (tag === 'sea food') return m.includes('sea food') || m.includes('魚');
-    if (tag === 'vegan')    return m.includes('vegan') || m.includes('素');
-    return false;
-  });
+  // ====== 推薦菜式（包含價錢，一行一個 item） ======
+  function recommendDishes(meatTag) {
+    console.log('recommendDishes meatTag =', meatTag);
+    const tag = meatTag.toLowerCase();
+
+    const list = menuData.filter(d => {
+      const m = (d.meat || '').toLowerCase();
+      if (tag === 'beef')     return m.includes('beef') || m.includes('牛');
+      if (tag === 'chicken')  return m.includes('chicken') || m.includes('雞');
+      if (tag === 'pork')     return m.includes('pork') || m.includes('豬');
+      if (tag === 'sea food') return m.includes('sea food') || m.includes('魚');
+      if (tag === 'vegan')    return m.includes('vegan') || m.includes('素');
+      return false;
+    });
 
     console.log('recommended list size =', list.length);
 
@@ -158,19 +159,19 @@ function recommendDishes(meatTag) {
         : 'I could not find matching dishes for that choice. Please check the full FuShi Menu.';
     }
 
-    // shuffle + 取頭 3 個
     const shuffled = list.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+
     let lines;
     if (isZh) {
-      lines = shuffled.map(d => `• ${d.item}（${d.price}）`);
-      return '我幫你喺餐牌揀咗幾款可能啱你嘅菜式：\n' + lines.join('\n');
+      lines = shuffled.map(d => `• ${d.item} - $${d.price}`);
+      return '我幫你喺餐牌揀咗幾款可能啱你嘅菜式：<br>' + lines.join('<br>');
     } else {
-      lines = shuffled.map(d => `• ${d.item} (HKD ${d.price})`);
-      return 'Here are some dishes that may suit you:\n' + lines.join('\n');
+      lines = shuffled.map(d => `• ${d.item} - HKD ${d.price}`);
+      return 'Here are some dishes that may suit you:<br>' + lines.join('<br>');
     }
   }
 
-  // ====== Flow：食咩好 ======
+  // ====== 食咩好 Flow ======
   function flowEatToday(text) {
     const meatTag = chooseMeatTagFromText(text);
     if (!meatTag) {
@@ -191,10 +192,10 @@ function recommendDishes(meatTag) {
     }
   }
 
-  // ====== 其他 Flow（簡化版，可自行擴充） ======
+  // ====== 其他 Flow（簡化版） ======
   function flowReservation() {
     if (isZh) {
-      addBot('訂位方面，你可以話我知：日期、人數、大約時間，我會幫你整合資料，再交畀同事 WhatsApp 跟進。');
+      addBot('訂位方面，你可以話我知日期、人數同時間，我會幫你整合資料，再交畀同事 WhatsApp 跟進。');
     } else {
       addBot('For reservation, please tell me date, number of guests and time, and our staff will follow up via WhatsApp.');
     }
@@ -202,7 +203,7 @@ function recommendDishes(meatTag) {
 
   function flowBulk() {
     if (isZh) {
-      addBot('大量訂購方面，我可以先根據人數推介幾款套餐，之後再轉去 catering / bulk order 表單俾你揀。');
+      addBot('大量訂購方面，我可以先根據人數推介幾款套餐，之後再轉去 bulk order 表單俾你揀。');
     } else {
       addBot('For bulk purchase, I can suggest some set menus based on headcount, then direct you to the bulk order form.');
     }
@@ -218,7 +219,7 @@ function recommendDishes(meatTag) {
 
   function flowOrder() {
     if (isZh) {
-      addBot('你可以經線上點餐平台落單：［Online Order 連結］。如果想我先幫你揀菜，可以話我知「今日食咩好」。');
+      addBot('你可以經線上點餐平台落單：<a href="https://fushi.softether.net/byod/byod.aspx?data=hwZVZ2BqRSxraTV9YHWCRmw3D3D" target="_blank">Online Order</a>。如果想我先幫你揀菜，可以話我知「今日食咩好」。');
     } else {
       addBot('You can place order via our online ordering platform. If you want recommendations first, say “what to eat today”.');
     }
@@ -227,10 +228,10 @@ function recommendDishes(meatTag) {
   function flowFallback() {
     if (isZh) {
       addBot('我暫時未完全聽得明你嘅意思 😅');
-      addBot('你可以試吓咁問我：\n• 今日食咩好？\n• 我想食牛\n• 幫我訂位\n• 有冇大量訂購 / 到會？');
+      addBot('你可以試吓咁問我：<br>• 今日食咩好？<br>• 我想食牛<br>• 幫我訂位<br>• 有冇大量訂購 / 到會？');
     } else {
       addBot("I'm not fully sure what you mean.");
-      addBot('You may try asking: what to eat today, I want beef, I need a reservation, any bulk purchase or catering.');
+      addBot('You may try asking:<br>• what to eat today<br>• I want beef<br>• I need a reservation<br>• any bulk purchase or catering');
     }
   }
 
@@ -244,15 +245,15 @@ function recommendDishes(meatTag) {
     const intent = detectIntent(text);
     console.log('intent =', intent);
 
-    if (intent === 'eatToday') return flowEatToday(text);
+    if (intent === 'eatToday')   return flowEatToday(text);
     if (intent === 'reservation') return flowReservation();
-    if (intent === 'bulk') return flowBulk();
-    if (intent === 'catering') return flowCatering();
-    if (intent === 'order') return flowOrder();
+    if (intent === 'bulk')       return flowBulk();
+    if (intent === 'catering')   return flowCatering();
+    if (intent === 'order')      return flowOrder();
     return flowFallback();
   }
 
-  // ====== 綁定事件 ======
+  // ====== 事件綁定 ======
   sendBtn.addEventListener('click', handleUserInput);
   inputEl.addEventListener('keydown', e => {
     if (e.key === 'Enter') handleUserInput();
@@ -266,10 +267,9 @@ function recommendDishes(meatTag) {
 
   // ====== 初始化 ======
   (async function init() {
-    await loadMenuFromSheet();   // 正式版改為真正 fetch
+    await loadMenuFromSheet();
     renderGreeting();
   })();
 </script>
 </body>
 </html>
-

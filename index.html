@@ -5,23 +5,125 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fushi Food Assistant</title>
   <style>
-    /* 保留你原本嘅所有 CSS 樣式 */
-    body { font-family: Arial, sans-serif; background-color: #f5f5f5; display: flex; justify-content: center; align-items: stretch; min-height: 100vh; margin: 0; padding: 40px 10px; }
-    .chat-container { background: #ffffff; width: 100%; max-width: 420px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-    .top-bar { font-weight: bold; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .lang-btn { font-size: 12px; padding: 4px 6px; border-radius: 10px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; }
-    .chat-window { flex: 1; min-height: 260px; max-height: 420px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; padding: 10px; background: #fafafa; }
-    .msg { margin-bottom: 8px; line-height: 1.4; font-size: 14px; }
-    .bot { color: #333; }
-    .user { text-align: right; color: #007bff; }
-    .input-area { display: flex; gap: 6px; margin-top: 4px; }
-    .input-area input { flex: 1; padding: 8px 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
-    .input-area button { padding: 8px 10px; border-radius: 4px; border: none; background: #28a745; color: #fff; font-size: 14px; cursor: pointer; white-space: nowrap; }
-    #reservationForm, #cateringForm { font-size: 13px; border-top: 1px solid #eee; margin-top: 6px; padding-top: 4px; display:none; }
-    #reservationForm label, #cateringForm label { display: inline-block; width: 110px; }
-    #rsvWaBtn, #cateringWaBtn { margin-top: 4px; padding: 6px 8px; font-size: 13px; border-radius: 4px; border: none; background: #25d366; color: #fff; cursor: pointer; width: 100%; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      min-height: 100vh;
+      margin: 0;
+      padding: 40px 10px;
+    }
+    .chat-container {
+      background: #ffffff;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .top-bar {
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .lang-btn {
+      font-size: 12px;
+      padding: 4px 6px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      background: #f0f0f0;
+      cursor: pointer;
+    }
+    .chat-window {
+      flex: 1;
+      min-height: 260px;
+      max-height: 420px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+      background: #fafafa;
+    }
+    .msg {
+      margin-bottom: 8px;
+      line-height: 1.4;
+      font-size: 14px;
+    }
+    .bot {
+      color: #333;
+    }
+    .user {
+      text-align: right;
+      color: #007bff;
+    }
+    /* 🔴 Hot Keys 快捷按鈕樣式 */
+    .hot-keys {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 8px 0;
+      scrollbar-width: none;
+    }
+    .hot-keys::-webkit-scrollbar {
+      display: none;
+    }
+    .hot-key-btn {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border: 1px solid #d2e3fc;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .hot-key-btn:hover {
+      background: #d2e3fc;
+      transform: scale(1.05);
+    }
+    .input-area {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    .input-area button {
+      padding: 8px 10px;
+      border-radius: 4px;
+      border: none;
+      background: #28a745;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #reservationForm, #cateringForm {
+      font-size: 13px;
+      border-top: 1px solid #eee;
+      margin-top: 6px;
+      padding-top: 4px;
+      display: none;
+    }
     a { color: #007bff; }
-    @media (max-width: 600px) { body { padding: 0; } .chat-container { max-width: 100%; height: 100vh; border-radius: 0; } .chat-window { max-height: none; } }
+    @media (max-width: 600px) {
+      body { padding: 0; }
+      .chat-container { max-width: 100%; height: 100vh; border-radius: 0; }
+    }
   </style>
 </head>
 <body>
@@ -30,78 +132,158 @@
       <span id="titleText">福食小助手</span>
       <button id="langBtn" class="lang-btn">中文 / EN</button>
     </div>
+
     <div id="chat" class="chat-window"></div>
+
+    <!-- 🔴 Hot Keys 快捷按鈕 -->
+    <div class="hot-keys">
+      <button class="hot-key-btn" onclick="quickAction('今日食咩好？')">🍴 今日食咩好？</button>
+      <button class="hot-key-btn" onclick="quickAction('幫我訂位')">📅 幫我訂位</button>
+      <button class="hot-key-btn" onclick="quickAction('外賣自取')">🥡 外賣自取</button>
+      <button class="hot-key-btn" onclick="quickAction('到會服務')">📦 到會服務</button>
+      <button class="hot-key-btn" onclick="quickAction('最新優惠')">🧧 最新優惠</button>
+    </div>
 
     <!-- 訂位表單 -->
     <div id="reservationForm">
-      <div style="margin-bottom:4px;"><label id="lblRsvPax"></label><input id="rsvPax" type="number" min="1" style="width:80px;"></div>
-      <div style="margin-bottom:4px;"><label id="lblRsvDate"></label><input id="rsvDate" type="date"></div>
-      <div style="margin-bottom:4px;"><label id="lblRsvTime"></label><input id="rsvTime" type="time"></div>
-      <div style="margin-bottom:4px;"><label id="lblRsvPhone"></label><input id="rsvPhone" type="tel" style="width:140px;"></div>
-      <button id="rsvWaBtn"></button>
+      <div style="margin-bottom:4px;">
+        <label>人數：</label>
+        <input id="rsvPax" type="number" min="1" style="width:80px;">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>日期：</label>
+        <input id="rsvDate" type="date">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>時間：</label>
+        <input id="rsvTime" type="time">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>電話：</label>
+        <input id="rsvPhone" type="tel" style="width:140px;">
+      </div>
+      <button id="rsvWaBtn" style="background:#25d366;">📱 WhatsApp 確認</button>
     </div>
 
     <!-- 到會表單 -->
     <div id="cateringForm">
-      <div style="margin-bottom:4px;"><label id="lblCatOccasion"></label><input id="catOccasion" type="text"></div>
-      <div style="margin-bottom:4px;"><label id="lblCatPax"></label><input id="catPax" type="text"></div>
-      <div style="margin-bottom:4px;"><label id="lblCatDate"></label><input id="catDate" type="date"></div>
-      <div style="margin-bottom:4px;"><label id="lblCatTime"></label><input id="catTime" type="time"></div>
-      <div style="margin-bottom:4px;"><label id="lblCatItems"></label><textarea id="catItems" style="width:100%; min-height:40px;"></textarea></div>
-      <div style="margin-bottom:4px;"><label id="lblCatContact"></label><input id="catContact" type="text"></div>
-      <button id="cateringWaBtn"></button>
+      <div style="margin-bottom:4px;">
+        <label>用途：</label>
+        <input id="catOccasion" type="text" placeholder="公司活動/生日會">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>人數：</label>
+        <input id="catPax" type="text" placeholder="20人">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>日期：</label>
+        <input id="catDate" type="date">
+      </div>
+      <div style="margin-bottom:4px;">
+        <label>聯絡：</label>
+        <input id="catContact" type="text" placeholder="Mr Chan 9xxxxxxx">
+      </div>
+      <button id="cateringWaBtn" style="background:#25d366;">📱 WhatsApp 傳送</button>
     </div>
 
     <div class="input-area">
-      <input id="userInput" type="text">
+      <input id="userInput" type="text" placeholder="請直接輸入你的問題...">
       <button id="sendBtn">送出</button>
     </div>
   </div>
 
   <script>
-    // 🔴 請確保呢度係你最新部署嘅 URL
+    // 🔴 更新為你嘅正確 API URL
     const MENU_API_URL = 'https://script.google.com/macros/s/1ttd8WfW8V-5JwTv9-aTWlji1qW8N3f2jUjO13zMqtqc/exec?type=menu';
-
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const langBtn = document.getElementById('langBtn');
-    const titleText = document.getElementById('titleText');
-    const rsvForm = document.getElementById('reservationForm');
-    const cateringForm = document.getElementById('cateringForm');
-
-    let currentLang = 'zh';
+    const WA_PHONE = '85264067605';
+    
     let menuData = [];
+    let currentLang = 'zh';
 
-    const texts = {
-      title: { zh: '福食小助手', en: 'Fushi Food Assistant' },
-      langBtn: { zh: '中文 / EN', en: 'EN / 中文' },
-      welcome1: { zh: '哈囉～ 歡迎嚟到「福食」！我係你嘅飲食小助手 👋', en: 'Hi! Welcome to "Fushi". I am your food assistant 👋' },
-      welcome2: { zh: '你可以問我：有咩推介、訂位、到會、外賣等。', en: 'You can ask: recommendations, booking, catering, takeaway etc.' },
-      askMain: { zh: '你而家最想我幫你做啲乜？', en: 'What would you like me to help you with?' },
-      eatAsk: { zh: '想食咩肉類或海鮮？例如：牛、雞、豬、海鮮、素食～', en: 'Any preference? E.g. Beef, Chicken, Pork, Seafood or Vegan.' },
-      menuText: { zh: '電子餐牌：', en: 'E-menu:' },
-      rsvDone: { zh: '請到 WhatsApp 確認，唔該晒！', en: 'Please confirm on WhatsApp, thank you!' }
-    };
-
-    // 🔴 修改後嘅數據加載邏輯
-    async function loadMenuFromSheet() {
+    // 🔴 加載菜單數據
+    async function loadMenu() {
       try {
         const res = await fetch(MENU_API_URL);
-        const data = await res.json();
-        // 直接存儲 API 返回嘅結構
-        menuData = data.map(item => ({
-          period: item.period,
-          nameZh: item.item_zh || item.item,
-          nameEn: item.item_en || item.item,
-          meat: item.meat, // 依家 API 會返回 "Beef", "Chicken" 等英文標籤
-          price: item.price
-        }));
-        console.log('Menu Data Loaded:', menuData);
-      } catch (err) {
-        console.error('API Error:', err);
-        addBot('抱歉，載入餐牌失敗。');
+        menuData = await res.json();
+        console.log('菜單加載成功：', menuData.length, '項');
+        welcome();
+      } catch (e) {
+        console.error('菜單加載失敗：', e);
+        welcome();
       }
+    }
+
+    // 🔴 快捷鍵處理
+    function quickAction(text) {
+      handleKeyword(text);
+    }
+
+    // 🔴 主要邏輯處理
+    function handleKeyword(raw) {
+      addUser(raw);
+      const t = raw.toLowerCase();
+
+      if (t.includes('食咩') || t.includes('推介') || t.includes('recommend')) {
+        addBot('今日有冇特別想食嘅？例如：牛、雞、豬、海鮮、素食');
+        return;
+      }
+
+      // 🔴 肉類推薦（依家會用你 Sheet 嘅數據）
+      const meatMap = {
+        '牛': 'Beef', 'beef': 'Beef',
+        '雞': 'Chicken', 'chicken': 'Chicken', 
+        '豬': 'Pork', 'pork': 'Pork',
+        '海鮮': 'Sea Food', 'seafood': 'Sea Food',
+        '素': 'Vegan', 'vegan': 'Vegan'
+      };
+
+      for (let [key, tag] of Object.entries(meatMap)) {
+        if (t.includes(key)) {
+          showRecommendation(tag);
+          return;
+        }
+      }
+
+      // 🔴 其他功能
+      if (t.includes('訂位') || t.includes('book')) {
+        document.getElementById('reservationForm').style.display = 'block';
+        addBot('好呀！請填寫訂位資料：');
+        return;
+      }
+
+      if (t.includes('到會') || t.includes('catering')) {
+        document.getElementById('cateringForm').style.display = 'block';
+        addBot('到會服務請填寫資料：');
+        return;
+      }
+
+      if (t.includes('外賣') || t.includes('自取')) {
+        addBot('外賣自取可以經呢個連結落單：');
+        addBotHTML('👉 <a href="https://fushi.softether.net/byod/byod.aspx?data=hwZVZ%2BqRSxraTV9YHWCRmw%3D%3D" target="_blank">網上落單</a>');
+        return;
+      }
+
+      if (t.includes('優惠')) {
+        addBot('最新優惠可以睇電子餐牌最後一頁！');
+        addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">電子餐牌</a>');
+        return;
+      }
+
+      addBot('你可以試吓：今日食咩好？、幫我訂位、到會服務、外賣自取、最新優惠');
+    }
+
+    function showRecommendation(meatTag) {
+      const list = menuData.filter(d => d.meat?.toLowerCase() === meatTag.toLowerCase()).slice(0, 3);
+      
+      if (list.length === 0) {
+        addBot('暫時未有呢類菜式，可以睇吓電子餐牌？');
+        return;
+      }
+
+      addBot(`我幫你揀咗幾款 ${meatTag} 菜式：`);
+      const lines = list.map(d => `• ${d.item_zh || d.item} (${d.item_en || ''})${d.price ? ' $' + d.price : ''}`);
+      addBotHTML(lines.join('<br>'));
+      addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">睇完整餐牌</a>');
     }
 
     function addBot(text) {
@@ -120,69 +302,77 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // 🔴 修改後嘅推薦邏輯：匹配英文 meat 標籤
-    function recommendDishes(keyword) {
-      const t = keyword.toLowerCase();
-      let meatTag = '';
-      if (t.includes('牛') || t.includes('beef')) meatTag = 'beef';
-      if (t.includes('雞') || t.includes('chicken')) meatTag = 'chicken';
-      if (t.includes('豬') || t.includes('pork')) meatTag = 'pork';
-      if (t.includes('海鮮') || t.includes('seafood')) meatTag = 'sea food';
-      if (t.includes('素') || t.includes('vegan')) meatTag = 'vegan';
-
-      if (!meatTag) {
-        addBot(texts.eatAsk[currentLang]);
-        return;
-      }
-
-      const list = menuData.filter(d => d.meat.toLowerCase() === meatTag).slice(0, 3);
-
-      if (list.length === 0) {
-        addBot(currentLang === 'zh' ? '暫時未有呢類推薦，睇吓餐牌？' : 'No items found, check our menu?');
-      } else {
-        addBot(currentLang === 'zh' ? '幫你揀咗幾款：' : 'Here are some picks:');
-        const lines = list.map(d => `• ${currentLang === 'zh' ? d.nameZh : d.nameEn}${d.price ? ' ($' + d.price + ')' : ''}`);
-        addBotHTML(lines.join('<br>'));
-      }
-      addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">Full Menu</a>');
+    function addUser(text) {
+      const div = document.createElement('div');
+      div.className = 'msg user';
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
     }
 
-    function handleKeyword(raw) {
-      const t = raw.toLowerCase();
-      const userDiv = document.createElement('div');
-      userDiv.className = 'msg user';
-      userDiv.textContent = raw;
-      chat.appendChild(userDiv);
-
-      if (t.includes('食咩') || t.includes('推介') || t.includes('eat') || t.includes('recommend')) {
-        recommendDishes(raw);
-      } else if (t.includes('訂位') || t.includes('book')) {
-        rsvForm.style.display = 'block';
-        addBot('請填寫訂位資料：');
-      } else if (t.includes('到會') || t.includes('catering')) {
-        cateringForm.style.display = 'block';
-        addBot('請填寫到會資料：');
-      } else {
-        addBot(texts.welcome2[currentLang]);
-      }
+    function welcome() {
+      chat.innerHTML = '';
+      addBot('哈囉～歡迎嚟到「福食」！👋');
+      addBot('你可以直接撳快捷按鈕，或者打字問我：有咩推介、訂位、到會、外賣、優惠等！');
     }
 
-    sendBtn.onclick = () => { handleKeyword(input.value); input.value = ''; };
-    input.onkeydown = (e) => { if(e.key==='Enter') sendBtn.onclick(); };
-    
-    // 初始化
-    loadMenuFromSheet().then(() => {
-        addBot(texts.welcome1['zh']);
-        addBot(texts.askMain['zh']);
-    });
-
-    // 表單按鈕邏輯 (WhatsApp)
+    // 🔴 WhatsApp 表單提交
     document.getElementById('rsvWaBtn').onclick = () => {
-      const text = `我想訂位：
-人數：${document.getElementById('rsvPax').value}
-日期：${document.getElementById('rsvDate').value}`;
-      window.open(`https://wa.me/85264067605?text=${encodeURIComponent(text)}`);
+      const pax = document.getElementById('rsvPax').value;
+      const date = document.getElementById('rsvDate').value;
+      const time = document.getElementById('rsvTime').value;
+      const phone = document.getElementById('rsvPhone').value;
+      
+      const text = `我想喺「福食」訂位：
+人數：${pax}位
+日期：${date}
+時間：${time}
+電話：${phone}
+麻煩確認位，唔該晒！`;
+      window.open(`https://wa.me/${WA_PHONE}?text=${encodeURIComponent(text)}`, '_blank');
+      addBot('已開 WhatsApp，同事會即時回覆你！🙏');
     };
+
+    document.getElementById('cateringWaBtn').onclick = () => {
+      const occasion = document.getElementById('catOccasion').value;
+      const pax = document.getElementById('catPax').value;
+      const date = document.getElementById('catDate').value;
+      const contact = document.getElementById('catContact').value;
+      
+      const text = `我想安排到會服務：
+用途：${occasion}
+人數：${pax}
+日期：${date}
+聯絡：${contact}
+麻煩提供套餐建議，多謝！`;
+      window.open(`https://wa.me/${WA_PHONE}?text=${encodeURIComponent(text)}`, '_blank');
+      addBot('已開 WhatsApp，同事會即時跟進！🙏');
+    };
+
+    // 🔴 事件綁定
+    document.getElementById('sendBtn').onclick = () => {
+      const val = document.getElementById('userInput').value.trim();
+      if (val) {
+        handleKeyword(val);
+        document.getElementById('userInput').value = '';
+      }
+    };
+
+    document.getElementById('userInput').onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('sendBtn').onclick();
+      }
+    };
+
+    // 🔴 語言切換（可選）
+    document.getElementById('langBtn').onclick = () => {
+      currentLang = currentLang === 'zh' ? 'en' : 'zh';
+      document.getElementById('langBtn').textContent = currentLang === 'zh' ? 'EN' : '中文';
+      addBot(currentLang === 'zh' ? '已切換中文' : 'Switched to English');
+    };
+
+    // 🔴 頁面載入完成
+    window.onload = loadMenu;
   </script>
 </body>
 </html>

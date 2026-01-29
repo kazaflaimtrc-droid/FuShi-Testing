@@ -227,7 +227,7 @@
   </div>
 
   <script>
-    // 換成你實際 Web App URL（後面一定要有 ?type=menu）
+    // 你 Apps Script Web App URL（已經回傳 period/item/meat/price 結構）
     const MENU_API_URL =
       'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
 
@@ -369,6 +369,7 @@
       }
     };
 
+    // 依家使用你現成 JSON 結構：{period, item, meat, price}
     async function loadMenuFromSheet() {
       try {
         const res = await fetch(MENU_API_URL);
@@ -384,16 +385,29 @@
 
         const data = await res.json();
 
-        // 期望 JSON：{period,itemZh,itemEn,meatEn,price}，第一行係表頭
         menuData = (data || [])
-          .filter((row, idx) => idx > 0 && (row.itemZh || row.itemEn))
-          .map(row => ({
-            period: row.period || 'All Day',
-            nameZh: row.itemZh || row.itemEn || '',
-            nameEn: row.itemEn || row.itemZh || '',
-            meat:   (row.meatEn || '').toString().trim(),   // Beef / Chicken / Pork / Seafood / Vegan...
-            price:  Number(row.price || 0) || 0
-          }));
+          .filter(row => row.item)
+          .map(row => {
+            const period = (row.period || 'All Day').toString().trim();
+            const itemZh = (row.item || '').toString().replace(/,$/, '').trim();
+            const itemEn = (row.meat || '').toString().trim();   // 你把英文名放在 meat
+            const meatZh = (row.price || '').toString().trim();  // 牛 / 雞 / 豬 / 海鮮 / 素食
+
+            let meatTag = '';
+            if (meatZh === '牛') meatTag = 'Beef';
+            else if (meatZh === '雞') meatTag = 'Chicken';
+            else if (meatZh === '豬') meatTag = 'Pork';
+            else if (meatZh === '海鮮') meatTag = 'Sea Food';
+            else if (meatZh === '素' || meatZh === '素食') meatTag = 'Vegan';
+
+            return {
+              period,
+              nameZh: itemZh || itemEn,
+              nameEn: itemEn || itemZh,
+              meat: meatTag,
+              price: null     // 目前 JSON 無真正價錢，先唔顯示
+            };
+          });
 
         console.log('menuData sample', menuData[0]);
       } catch (err) {
@@ -475,7 +489,7 @@
     }
 
     function formatPrice(price) {
-      if (!price) return '';
+      if (price == null) return '';
       return `HK$${price}`;
     }
 
@@ -546,7 +560,7 @@
       if (t.includes('牛') || t.includes('beef')) return 'Beef';
       if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
       if (t.includes('豬') || t.includes('pork')) return 'Pork';
-      if (t.includes('海鮮') || t.includes('seafood') || t.includes('sea food')) return 'Seafood';
+      if (t.includes('海鮮') || t.includes('seafood') || t.includes('sea food')) return 'Sea Food';
       if (t.includes('素') || t.includes('vegan') || t.includes('veg')) return 'Vegan';
       return null;
     }

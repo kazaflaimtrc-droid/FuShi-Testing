@@ -369,46 +369,60 @@
       }
     };
 
-    async function loadMenuFromSheet() {
-      try {
-        const res = await fetch(MENU_API_URL);
-        if (!res.ok) {
-          console.error('loadMenuFromSheet error', res.status, res.statusText);
-          addBot(
-            currentLang === 'zh'
-              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-              : 'There was an issue loading the live menu.'
-          );
-          return;
-        }
-
-        const data = await res.json();
-
-        menuData = (data || [])
-          .filter((row, idx) => idx > 0 && (row.itemZh || row.itemEn))
-          .map(row => {
-            const meatEn = (row.meatEn || '').toString().trim();
-
-            return {
-              period: row.period || 'All Day',
-              nameZh: row.itemZh || row.itemEn || '',
-              nameEn: row.itemEn || row.itemZh || '',
-              meat: meatEn,
-              price: Number(row.price || 0) || 0
-            };
-          });
-
-        console.log('menuData sample', menuData[0]);
-      } catch (err) {
-        console.error('loadMenuFromSheet exception', err);
-        addBot(
-          currentLang === 'zh'
-            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-            : 'There was an issue loading the live menu.'
-        );
-      }
+async function loadMenuFromSheet() {
+  try {
+    const res = await fetch(MENU_API_URL);
+    if (!res.ok) {
+      console.error('loadMenuFromSheet error', res.status, res.statusText);
+      addBot(
+        currentLang === 'zh'
+          ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+          : 'There was an issue loading the live menu.'
+      );
+      return;
     }
 
+    const data = await res.json();
+
+    // data[0] 係表頭（Available Period / Item in Chinese / Item in english / 肉類）
+    menuData = (data || [])
+      .filter((row, idx) => idx > 0 && row.item)   // 跳過第一行表頭
+      .map(row => {
+        // item 形態： '特厚咸牛肉鬆蛋治\nCorned Beef, Egg with Truffle Sandwich'
+        const rawItem = row.item.toString();
+        const parts = rawItem.split('\n');
+        const nameZh = (parts[0] || '').trim();
+        const nameEn = (parts[1] || '').trim();
+
+        // meat 係中文（牛 / 雞 / 豬 / 海鮮 / 素），用你之前同一套 mapping
+        const meatZh = (row.meat || '').toString().trim();
+        let meatEnTag = '';
+        if (meatZh === '牛') meatEnTag = 'Beef';
+        else if (meatZh === '雞') meatEnTag = 'Chicken';
+        else if (meatZh === '豬') meatEnTag = 'Pork';
+        else if (meatZh === '海鮮') meatEnTag = 'Sea Food';
+        else if (meatZh === '素食' || meatZh === '素') meatEnTag = 'Vegan';
+
+        return {
+          period: row.period || 'All Day',
+          nameZh: nameZh || nameEn,
+          nameEn: nameEn || nameZh,
+          meat: meatEnTag,                       // 用英文 tag 比 recommendDishes 用
+          price: Number(row.price || 0) || 0
+        };
+      });
+
+    console.log('menuData sample', menuData[0]);
+  } catch (err) {
+    console.error('loadMenuFromSheet exception', err);
+    addBot(
+      currentLang === 'zh'
+        ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+        : 'There was an issue loading the live menu.'
+    );
+  }
+}
+    
     function applyLanguage() {
       titleText.textContent = texts.title[currentLang];
       langBtn.textContent = texts.langBtn[currentLang];
@@ -822,3 +836,4 @@
   </script>
 </body>
 </html>
+

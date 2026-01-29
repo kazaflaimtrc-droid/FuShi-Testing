@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>福食飲食小助手</title>
+  <title>Fushi Food Assistant</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -170,69 +170,64 @@
 
     <div id="chat" class="chat-window"></div>
 
-    <!-- 訂位表單 -->
+    <!-- 訂位資料表單 -->
     <div id="reservationForm" style="display:none;">
       <div style="margin-bottom:4px;">
-        <label>人數 / People：</label>
+        <label><span id="lblRsvPax"></span>：</label>
         <input id="rsvPax" type="number" min="1" style="width:80px;">
       </div>
       <div style="margin-bottom:4px;">
-        <label>日期 / Date：</label>
+        <label><span id="lblRsvDate"></span>：</label>
         <input id="rsvDate" type="date">
       </div>
       <div style="margin-bottom:4px;">
-        <label>時間 / Time：</label>
+        <label><span id="lblRsvTime"></span>：</label>
         <input id="rsvTime" type="time">
       </div>
       <div style="margin-bottom:4px;">
-        <label>電話 / Phone：</label>
-        <input id="rsvPhone" type="tel" placeholder="852XXXXXXXX" style="width:140px;">
+        <label><span id="lblRsvPhone"></span>：</label>
+        <input id="rsvPhone" type="tel" style="width:140px;">
       </div>
-      <button id="rsvWaBtn">
-        用 WhatsApp 傳送訂位資料 / Send booking via WhatsApp
-      </button>
+      <button id="rsvWaBtn"></button>
     </div>
 
     <!-- 到會 / 大量訂購表單 -->
     <div id="cateringForm" style="display:none;">
       <div style="margin-bottom:4px;">
-        <label>用途 / Occasion：</label>
-        <input id="catOccasion" type="text" placeholder="公司活動 / 生日會...">
+        <label><span id="lblCatOccasion"></span>：</label>
+        <input id="catOccasion" type="text">
       </div>
       <div style="margin-bottom:4px;">
-        <label>人數 / 份量：</label>
-        <input id="catPax" type="text" placeholder="例如：20人 / 30盒飯">
+        <label><span id="lblCatPax"></span>：</label>
+        <input id="catPax" type="text">
       </div>
       <div style="margin-bottom:4px;">
-        <label>日期 / Date：</label>
+        <label><span id="lblCatDate"></span>：</label>
         <input id="catDate" type="date">
       </div>
       <div style="margin-bottom:4px;">
-        <label>時間 / Time：</label>
+        <label><span id="lblCatTime"></span>：</label>
         <input id="catTime" type="time">
       </div>
       <div style="margin-bottom:4px;">
-        <label>簡單菜式 / Set：</label>
-        <textarea id="catItems" placeholder="例如：到會A套餐 x2, B套餐 x1"></textarea>
+        <label><span id="lblCatItems"></span>：</label>
+        <textarea id="catItems"></textarea>
       </div>
       <div style="margin-bottom:4px;">
-        <label>聯絡人 / 電話：</label>
-        <input id="catContact" type="text" placeholder="Mr Chan 9xxxxxxx">
+        <label><span id="lblCatContact"></span>：</label>
+        <input id="catContact" type="text">
       </div>
-      <button id="cateringWaBtn">
-        用 WhatsApp 傳送到會／大量訂購資料 / Send via WhatsApp
-      </button>
+      <button id="cateringWaBtn"></button>
     </div>
 
     <div class="input-area">
-      <input id="userInput" type="text"
-             placeholder="請直接輸入你的問題 / Please type your question">
+      <input id="userInput" type="text">
       <button id="sendBtn">送出</button>
     </div>
   </div>
 
   <script>
-    // ====== 設定：改成你自己的 Web App URL ======
+    // 1. 改成你自己的 Web App URL（記得加 ?type=menu）
     const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
 
     const chat = document.getElementById('chat');
@@ -260,50 +255,7 @@
     let currentLang = 'zh';
     let menuData = [];
 
-    // ====== 從 Web App 讀取 Menu JSON ======
-    async function loadMenuFromSheet() {
-      try {
-        const res = await fetch(MENU_API_URL);
-        if (!res.ok) {
-          console.error('loadMenuFromSheet error', res.status, res.statusText);
-          addBot(
-            currentLang === 'zh'
-              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-              : 'There was an issue loading the live menu.'
-          );
-          return;
-        }
-
-        const data = await res.json();
-
-        // data[0] 大多數係表頭，所以由 index 1 開始
-        menuData = (data || [])
-          .filter((row, idx) => idx > 0 && row.item)
-          .map(row => {
-            const rawMeat = row.meat || '';
-            // 例如 "牛\nBeef" -> "Beef"
-            const meatEn = rawMeat.split('\n').pop().trim();
-
-            return {
-              period: row.period || 'All Day',
-              nameZh: row.item || '',
-              nameEn: row.item || '',
-              meat: meatEn,
-              price: Number(row.price || 0) || 0
-            };
-          });
-
-        console.log('menuData sample', menuData[0]);
-      } catch (err) {
-        console.error('loadMenuFromSheet exception', err);
-        addBot(
-          currentLang === 'zh'
-            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-            : 'There was an issue loading the live menu.'
-        );
-      }
-    }
-
+    // 多語文字
     const texts = {
       title: {
         zh: '福食小助手',
@@ -313,9 +265,43 @@
         zh: '中文 / EN',
         en: 'EN / 中文'
       },
-      placeholder: {
-        zh: '請直接輸入你的問題，例如：有咩好食、幫我訂位、到會、大量訂購、外賣、有冇優惠…',
-        en: 'Type your question, e.g. what to eat, book a table, catering / bulk order, takeaway, any promotion…'
+      placeholders: {
+        userInput: {
+          zh: '請直接輸入你的問題，例如：有咩好食、幫我訂位、到會、大量訂購、外賣、有冇優惠…',
+          en: 'Type your question, e.g. what to eat, book a table, catering / bulk order, takeaway, any promotion…'
+        },
+        rsvPhone: {
+          zh: '852XXXXXXXX',
+          en: '852XXXXXXXX'
+        },
+        catOccasion: {
+          zh: '公司活動 / 生日會…',
+          en: 'Company event / birthday...'
+        },
+        catPax: {
+          zh: '例如：20人 / 30盒飯',
+          en: 'e.g. 20 people / 30 lunch boxes'
+        },
+        catItems: {
+          zh: '例如：到會A套餐 x2, B套餐 x1',
+          en: 'e.g. Set A x2, Set B x1'
+        },
+        catContact: {
+          zh: 'Mr Chan 9xxxxxxx',
+          en: 'Mr Chan 9xxxxxxx'
+        }
+      },
+      labels: {
+        rsvPax:       { zh: '人數',           en: 'People' },
+        rsvDate:      { zh: '日期',           en: 'Date' },
+        rsvTime:      { zh: '時間',           en: 'Time' },
+        rsvPhone:     { zh: '電話',           en: 'Phone' },
+        catOccasion:  { zh: '用途',           en: 'Occasion' },
+        catPax:       { zh: '人數／份量',     en: 'Pax / Quantity' },
+        catDate:      { zh: '日期',           en: 'Date' },
+        catTime:      { zh: '時間',           en: 'Time' },
+        catItems:     { zh: '簡單菜式 / Set', en: 'Set / Dishes' },
+        catContact:   { zh: '聯絡人／電話',   en: 'Contact / Phone' }
       },
       welcome1: {
         zh: '哈囉～ 歡迎嚟到「福食」！我係你嘅飲食小助手 👋',
@@ -383,11 +369,86 @@
       }
     };
 
+    // ====== 從 Web App 讀 menu JSON ======
+    async function loadMenuFromSheet() {
+      try {
+        const res = await fetch(MENU_API_URL);
+        if (!res.ok) {
+          console.error('loadMenuFromSheet error', res.status, res.statusText);
+          addBot(
+            currentLang === 'zh'
+              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+              : 'There was an issue loading the live menu.'
+          );
+          return;
+        }
+
+        const data = await res.json();
+
+        // data[0] 係表頭，從 index 1 開始
+        menuData = (data || [])
+          .filter((row, idx) => idx > 0 && row.item)
+          .map(row => {
+            const rawMeat = row.meat || '';
+            const meatEn = rawMeat.split('\n').pop().trim(); // 例如 "牛\nBeef" -> "Beef"
+
+            return {
+              period: row.period || 'All Day',
+              nameZh: row.item || '',
+              nameEn: row.item || '',
+              meat: meatEn,
+              price: Number(row.price || 0) || 0
+            };
+          });
+
+        console.log('menuData sample', menuData[0]);
+      } catch (err) {
+        console.error('loadMenuFromSheet exception', err);
+        addBot(
+          currentLang === 'zh'
+            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+            : 'There was an issue loading the live menu.'
+        );
+      }
+    }
+
     function applyLanguage() {
+      // 頂部
       titleText.textContent = texts.title[currentLang];
       langBtn.textContent = texts.langBtn[currentLang];
-      input.placeholder = texts.placeholder[currentLang];
+
+      // 主輸入框 placeholder
+      input.placeholder = texts.placeholders.userInput[currentLang];
+
+      // 訂位 label
+      document.getElementById('lblRsvPax').textContent   = texts.labels.rsvPax[currentLang];
+      document.getElementById('lblRsvDate').textContent  = texts.labels.rsvDate[currentLang];
+      document.getElementById('lblRsvTime').textContent  = texts.labels.rsvTime[currentLang];
+      document.getElementById('lblRsvPhone').textContent = texts.labels.rsvPhone[currentLang];
+
+      // 訂位 placeholder
+      rsvPhoneInput.placeholder = texts.placeholders.rsvPhone[currentLang];
+
+      // 到會 label
+      document.getElementById('lblCatOccasion').textContent = texts.labels.catOccasion[currentLang];
+      document.getElementById('lblCatPax').textContent      = texts.labels.catPax[currentLang];
+      document.getElementById('lblCatDate').textContent     = texts.labels.catDate[currentLang];
+      document.getElementById('lblCatTime').textContent     = texts.labels.catTime[currentLang];
+      document.getElementById('lblCatItems').textContent    = texts.labels.catItems[currentLang];
+      document.getElementById('lblCatContact').textContent  = texts.labels.catContact[currentLang];
+
+      // 到會 placeholder
+      catOccasionInput.placeholder = texts.placeholders.catOccasion[currentLang];
+      catPaxInput.placeholder      = texts.placeholders.catPax[currentLang];
+      catItemsInput.placeholder    = texts.placeholders.catItems[currentLang];
+      catContactInput.placeholder  = texts.placeholders.catContact[currentLang];
+
+      // WhatsApp 按鈕文字
       rsvWaBtn.textContent = texts.rsvFormBtn[currentLang];
+      cateringWaBtn.textContent =
+        currentLang === 'zh'
+          ? '用 WhatsApp 傳送到會／大量訂購資料'
+          : 'Send catering / bulk order via WhatsApp';
     }
 
     function addBot(text) {
@@ -417,16 +478,6 @@
     function normalize(text) {
       return text.toLowerCase().trim();
     }
-
-    langBtn.addEventListener('click', () => {
-      currentLang = currentLang === 'zh' ? 'en' : 'zh';
-      applyLanguage();
-      addBot(
-        currentLang === 'zh'
-          ? '已切換到中文介面，你可以用中文繼續同我傾～'
-          : 'Switched to English interface. You can continue in English if you like.'
-      );
-    });
 
     function welcome() {
       chat.innerHTML = '';
@@ -737,6 +788,17 @@
           : 'WhatsApp has been opened. Our team will follow up on your catering / bulk order shortly 🙏'
       );
     }
+
+    // 事件綁定
+    langBtn.addEventListener('click', () => {
+      currentLang = currentLang === 'zh' ? 'en' : 'zh';
+      applyLanguage();
+      addBot(
+        currentLang === 'zh'
+          ? '已切換到中文介面，你可以用中文繼續同我傾～'
+          : 'Switched to English interface. You can continue in English if you like.'
+      );
+    });
 
     rsvWaBtn.addEventListener('click', (e) => {
       e.preventDefault();

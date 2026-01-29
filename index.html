@@ -227,7 +227,7 @@
   </div>
 
   <script>
-    // 你 Apps Script Web App URL（已經回傳 period/item/meat/price 結構）
+    // 改成你 Apps Script Web App URL（包含 ?type=menu）
     const MENU_API_URL =
       'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
 
@@ -369,7 +369,6 @@
       }
     };
 
-    // 依家使用你現成 JSON 結構：{period, item, meat, price}
     async function loadMenuFromSheet() {
       try {
         const res = await fetch(MENU_API_URL);
@@ -385,30 +384,30 @@
 
         const data = await res.json();
 
-menuData = (data || [])
-  .filter(row => row.item)
-  .map(row => {
-    const period = (row.period || 'All Day').toString().trim();
-    const itemZh = (row.item || '').toString().replace(/,$/, '').trim();
-    const itemEn = (row.meat || '').toString().trim();   // 英文名
+        // 預期每行：{ period, item, meat, meatType, price }
+        menuData = (data || [])
+          .filter(row => row.item)
+          .map(row => {
+            const period = (row.period || 'All Day').toString().trim();
+            const itemZh = (row.item || '').toString().replace(/,$/, '').trim();
+            const itemEn = (row.meat || '').toString().trim();        // 英文菜名
+            const meatZh = (row.meatType || '').toString().trim();    // 牛 / 雞 / 豬 / 海鮮 / 素食
 
-    // 肉類 tag 用你之前既 mapping，如果你冇就保持原來程式
-    const meatZh = (row.meatType || '').toString().trim();
-    let meatTag = '';
-    if (meatZh === '牛') meatTag = 'Beef';
-    else if (meatZh === '雞') meatTag = 'Chicken';
-    else if (meatZh === '豬') meatTag = 'Pork';
-    else if (meatZh === '海鮮') meatTag = 'Sea Food';
-    else if (meatZh === '素' || meatZh === '素食') meatTag = 'Vegan';
+            let meatTag = '';
+            if (meatZh === '牛') meatTag = 'Beef';
+            else if (meatZh === '雞') meatTag = 'Chicken';
+            else if (meatZh === '豬') meatTag = 'Pork';
+            else if (meatZh === '海鮮') meatTag = 'Sea Food';
+            else if (meatZh === '素' || meatZh === '素食') meatTag = 'Vegan';
 
-    return {
-      period,
-      nameZh: itemZh || itemEn,
-      nameEn: itemEn || itemZh,
-      meat: meatTag,
-      price: Number(row.price || 0) || 0   // 直接用 JSON 價錢欄
-    };
-  });
+            return {
+              period,
+              nameZh: itemZh || itemEn,
+              nameEn: itemEn || itemZh,
+              meat: meatTag,
+              price: Number(row.price || 0) || 0
+            };
+          });
 
         console.log('menuData sample', menuData[0]);
       } catch (err) {
@@ -490,7 +489,7 @@ menuData = (data || [])
     }
 
     function formatPrice(price) {
-      if (price == null) return '';
+      if (!price) return '';
       return `HK$${price}`;
     }
 
@@ -835,4 +834,3 @@ menuData = (data || [])
   </script>
 </body>
 </html>
-

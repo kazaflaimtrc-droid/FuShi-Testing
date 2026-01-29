@@ -227,8 +227,9 @@
   </div>
 
   <script>
-    // 1. 改成你自己的 Web App URL（記得加 ?type=menu）
-    const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
+    // 改成你實際 Web App URL（包括 ?type=menu）
+    const MENU_API_URL =
+      'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
 
     const chat = document.getElementById('chat');
     const input = document.getElementById('userInput');
@@ -255,7 +256,6 @@
     let currentLang = 'zh';
     let menuData = [];
 
-    // 多語文字
     const texts = {
       title: {
         zh: '福食小助手',
@@ -369,67 +369,58 @@
       }
     };
 
-    // ====== 從 Web App 讀 menu JSON ======
     async function loadMenuFromSheet() {
-  try {
-    const res = await fetch(MENU_API_URL);
-    if (!res.ok) {
-      console.error('loadMenuFromSheet error', res.status, res.statusText);
-      addBot(
-        currentLang === 'zh'
-          ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-          : 'There was an issue loading the live menu.'
-      );
-      return;
+      try {
+        const res = await fetch(MENU_API_URL);
+        if (!res.ok) {
+          console.error('loadMenuFromSheet error', res.status, res.statusText);
+          addBot(
+            currentLang === 'zh'
+              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+              : 'There was an issue loading the live menu.'
+          );
+          return;
+        }
+
+        const data = await res.json();
+
+        menuData = (data || [])
+          .filter((row, idx) => idx > 0 && (row.itemZh || row.itemEn))
+          .map(row => {
+            const meatEn = (row.meatEn || '').toString().trim();
+
+            return {
+              period: row.period || 'All Day',
+              nameZh: row.itemZh || row.itemEn || '',
+              nameEn: row.itemEn || row.itemZh || '',
+              meat: meatEn,
+              price: Number(row.price || 0) || 0
+            };
+          });
+
+        console.log('menuData sample', menuData[0]);
+      } catch (err) {
+        console.error('loadMenuFromSheet exception', err);
+        addBot(
+          currentLang === 'zh'
+            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+            : 'There was an issue loading the live menu.'
+        );
+      }
     }
 
-    const data = await res.json();
-
-    // data[0] 係表頭，從 index 1 開始
-    menuData = (data || [])
-      .filter((row, idx) => idx > 0 && (row.itemZh || row.itemEn))
-      .map(row => {
-        // 用英文肉類欄位做 filter（Beef/Chicken/Pork/Sea Food/Vegan）
-        const meatEn = (row.meatEn || '').toString().trim();
-
-        return {
-          period: row.period || 'All Day',
-          nameZh: row.itemZh || row.itemEn || '',
-          nameEn: row.itemEn || row.itemZh || '',
-          meat: meatEn,
-          price: Number(row.price || 0) || 0
-        };
-      });
-
-    console.log('menuData sample', menuData[0]);
-  } catch (err) {
-    console.error('loadMenuFromSheet exception', err);
-    addBot(
-      currentLang === 'zh'
-        ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-        : 'There was an issue loading the live menu.'
-    );
-  }
-}
-
     function applyLanguage() {
-      // 頂部
       titleText.textContent = texts.title[currentLang];
       langBtn.textContent = texts.langBtn[currentLang];
 
-      // 主輸入框 placeholder
       input.placeholder = texts.placeholders.userInput[currentLang];
 
-      // 訂位 label
       document.getElementById('lblRsvPax').textContent   = texts.labels.rsvPax[currentLang];
       document.getElementById('lblRsvDate').textContent  = texts.labels.rsvDate[currentLang];
       document.getElementById('lblRsvTime').textContent  = texts.labels.rsvTime[currentLang];
       document.getElementById('lblRsvPhone').textContent = texts.labels.rsvPhone[currentLang];
-
-      // 訂位 placeholder
       rsvPhoneInput.placeholder = texts.placeholders.rsvPhone[currentLang];
 
-      // 到會 label
       document.getElementById('lblCatOccasion').textContent = texts.labels.catOccasion[currentLang];
       document.getElementById('lblCatPax').textContent      = texts.labels.catPax[currentLang];
       document.getElementById('lblCatDate').textContent     = texts.labels.catDate[currentLang];
@@ -437,13 +428,11 @@
       document.getElementById('lblCatItems').textContent    = texts.labels.catItems[currentLang];
       document.getElementById('lblCatContact').textContent  = texts.labels.catContact[currentLang];
 
-      // 到會 placeholder
       catOccasionInput.placeholder = texts.placeholders.catOccasion[currentLang];
       catPaxInput.placeholder      = texts.placeholders.catPax[currentLang];
       catItemsInput.placeholder    = texts.placeholders.catItems[currentLang];
       catContactInput.placeholder  = texts.placeholders.catContact[currentLang];
 
-      // WhatsApp 按鈕文字
       rsvWaBtn.textContent = texts.rsvFormBtn[currentLang];
       cateringWaBtn.textContent =
         currentLang === 'zh'
@@ -492,7 +481,6 @@
       return `HK$${price}`;
     }
 
-    // ====== 推介菜式 ======
     function recommendDishes(meatTag) {
       if (!menuData || menuData.length === 0) {
         addBot(
@@ -559,12 +547,11 @@
       if (t.includes('牛') || t.includes('beef')) return 'Beef';
       if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
       if (t.includes('豬') || t.includes('pork')) return 'Pork';
-      if (t.includes('海鮮') || t.includes('seafood') || t.includes('sea food')) return 'Sea Food';
+      if (t.includes('海鮮') || t.includes('seafood') || t.includes('sea food')) return 'Seafood';
       if (t.includes('素') || t.includes('vegan') || t.includes('veg')) return 'Vegan';
       return null;
     }
 
-    // ====== Intent 分類 ======
     function handleKeyword(raw) {
       const t = normalize(raw);
       addUser(raw);
@@ -789,7 +776,6 @@
       );
     }
 
-    // 事件綁定
     langBtn.addEventListener('click', () => {
       currentLang = currentLang === 'zh' ? 'en' : 'zh';
       applyLanguage();
@@ -825,7 +811,6 @@
       }
     });
 
-    // 初始化
     applyLanguage();
     loadMenuFromSheet()
       .then(() => {
@@ -837,4 +822,3 @@
   </script>
 </body>
 </html>
-

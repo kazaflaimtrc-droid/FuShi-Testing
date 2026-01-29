@@ -255,52 +255,45 @@
     let currentLang = 'zh';
     let menuData = [];
 
-    async function loadMenuFromSheet() {
-      const url = 'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
+async function loadMenuFromSheet() {
+  const url = 'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
 
-      try {
-        const res = await fetch(url);
-        if (!res.ok) {
-          console.error('loadMenuFromSheet error', res.status, res.statusText);
-          addBot(
-            currentLang === 'zh'
-              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-              : 'There was an issue loading the live menu.'
-          );
-          return;
-        }
-
-        const csv = await res.text();
-        const rows = csv.split('\n').map(r => r.trim()).filter(r => r);
-        const dataRows = rows.slice(1);
-
-        menuData = dataRows
-          .map(line => line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/))
-          .filter(cols => cols.length >= 4)
-          .map(cols => {
-            const period = cols[0] ? cols[0].replace(/"/g, '').trim() : 'All Day';
-            const item   = cols[1] ? cols[1].replace(/"/g, '').trim() : '';
-            const meat   = cols[2] ? cols[2].replace(/"/g, '').trim() : '';
-            const price  = cols[3] ? Number(cols[3].replace(/"/g, '').trim()) : 0;
-            return {
-              period: period || 'All Day',
-              nameZh: item,
-              nameEn: item,
-              meat: meat,
-              price: price
-            };
-          });
-
-        console.log('menuData sample', menuData[0]);
-      } catch (err) {
-        console.error('loadMenuFromSheet exception', err);
-        addBot(
-          currentLang === 'zh'
-            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-            : 'There was an issue loading the live menu.'
-        );
-      }
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error('loadMenuFromSheet error', res.status, res.statusText);
+      addBot(
+        currentLang === 'zh'
+          ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+          : 'There was an issue loading the live menu.'
+      );
+      return;
     }
+
+    // 👇 用 JSON，而唔係 text + split
+    const data = await res.json();
+
+    menuData = (data || [])
+      .filter(row => row.item)   // 保險，確保有 item 先用
+      .map(row => ({
+        period: row.period || 'All Day',
+        nameZh: row.item || '',
+        nameEn: row.item || '',
+        meat: row.meat || '',
+        price: Number(row.price || 0)
+      }));
+
+    console.log('menuData sample', menuData[0]);
+  } catch (err) {
+    console.error('loadMenuFromSheet exception', err);
+    addBot(
+      currentLang === 'zh'
+        ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+        : 'There was an issue loading the live menu.'
+    );
+  }
+}
+
 
     const texts = {
       title: {
@@ -770,3 +763,4 @@
   </script>
 </body>
 </html>
+

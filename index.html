@@ -227,7 +227,7 @@
   </div>
 
   <script>
-    // 改成你 Apps Script Web App URL（包含 ?type=menu）
+    // 你 Apps Script Web App URL（已經回傳 period/item/meat/price 結構）
     const MENU_API_URL =
       'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
 
@@ -369,6 +369,7 @@
       }
     };
 
+    // 依家使用你現成 JSON 結構：{period, item, meat, price}
     async function loadMenuFromSheet() {
       try {
         const res = await fetch(MENU_API_URL);
@@ -384,14 +385,13 @@
 
         const data = await res.json();
 
-        // 預期每行：{ period, item, meat, meatType, price }
         menuData = (data || [])
           .filter(row => row.item)
           .map(row => {
             const period = (row.period || 'All Day').toString().trim();
             const itemZh = (row.item || '').toString().replace(/,$/, '').trim();
-            const itemEn = (row.meat || '').toString().trim();        // 英文菜名
-            const meatZh = (row.meatType || '').toString().trim();    // 牛 / 雞 / 豬 / 海鮮 / 素食
+            const itemEn = (row.meat || '').toString().trim();   // 你把英文名放在 meat
+            const meatZh = (row.price || '').toString().trim();  // 牛 / 雞 / 豬 / 海鮮 / 素食
 
             let meatTag = '';
             if (meatZh === '牛') meatTag = 'Beef';
@@ -405,7 +405,7 @@
               nameZh: itemZh || itemEn,
               nameEn: itemEn || itemZh,
               meat: meatTag,
-              price: Number(row.price || 0) || 0
+              price: null     // 目前 JSON 無真正價錢，先唔顯示
             };
           });
 
@@ -489,7 +489,7 @@
     }
 
     function formatPrice(price) {
-      if (!price) return '';
+      if (price == null) return '';
       return `HK$${price}`;
     }
 

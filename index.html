@@ -369,43 +369,57 @@
       }
     };
 
-    async function loadMenuFromSheet() {
-      try {
-        const res = await fetch(MENU_API_URL);
-        if (!res.ok) {
-          console.error('loadMenuFromSheet error', res.status, res.statusText);
-          addBot(
-            currentLang === 'zh'
-              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-              : 'There was an issue loading the live menu.'
-          );
-          return;
-        }
-
-        const data = await res.json();
-
-        // data[0] 係表頭，之後每行：
-        // { period:'Breakfast', item:'特厚咸牛肉鬆蛋治', meat:'Beef', price:35 }
-        menuData = (data || [])
-          .filter((row, idx) => idx > 0 && row.item)
-          .map(row => ({
-            period: row.period || 'All Day',
-            nameZh: row.item || '',
-            nameEn: row.item || '',
-            meat:   (row.meat || '').toString().trim(),
-            price:  Number(row.price || 0) || 0
-          }));
-
-        console.log('menuData sample', menuData[0]);
-      } catch (err) {
-        console.error('loadMenuFromSheet exception', err);
-        addBot(
-          currentLang === 'zh'
-            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-            : 'There was an issue loading the live menu.'
-        );
-      }
+async function loadMenuFromSheet() {
+  try {
+    const res = await fetch(MENU_API_URL);
+    if (!res.ok) {
+      console.error('loadMenuFromSheet error', res.status, res.statusText);
+      addBot(
+        currentLang === 'zh'
+          ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+          : 'There was an issue loading the live menu.'
+      );
+      return;
     }
+
+    const data = await res.json();
+
+    // 依據你而家 JSON 結構：
+    // { period:'Breakfast', item:'特厚咸牛肉鬆蛋治', meat:'Corned Beef ...', price:'牛' }
+    menuData = (data || [])
+      .filter((row, idx) => idx > 0 && row.item)   // 跳過表頭
+      .map(row => {
+        const period = row.period || 'All Day';
+        const itemZh = (row.item || '').toString().trim();
+        const itemEn = (row.meat || '').toString().trim();   // 英文名放咗喺 meat
+        const meatTagZh = (row.price || '').toString().trim(); // 牛 / 雞 / 豬 / 海鮮 / 素食
+
+        let meatTagEn = '';
+        if (meatTagZh === '牛') meatTagEn = 'Beef';
+        else if (meatTagZh === '雞') meatTagEn = 'Chicken';
+        else if (meatTagZh === '豬') meatTagEn = 'Pork';
+        else if (meatTagZh === '海鮮') meatTagEn = 'Sea Food';
+        else if (meatTagZh === '素食' || meatTagZh === '素') meatTagEn = 'Vegan';
+
+        return {
+          period: period,
+          nameZh: itemZh || itemEn,
+          nameEn: itemEn || itemZh,
+          meat: meatTagEn,          // 用嚟 filter Beef/Chicken...
+          price: 0                  // 你而家冇真正價錢欄，暫時設 0
+        };
+      });
+
+    console.log('menuData sample', menuData[0]);
+  } catch (err) {
+    console.error('loadMenuFromSheet exception', err);
+    addBot(
+      currentLang === 'zh'
+        ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+        : 'There was an issue loading the live menu.'
+    );
+  }
+}
 
     function applyLanguage() {
       titleText.textContent = texts.title[currentLang];
@@ -540,15 +554,22 @@
       addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">FuShi Menu</a>');
     }
 
-    function chooseMeatTagFromText(raw) {
-      const t = normalize(raw);
-      if (t.includes('牛') || t.includes('beef')) return 'Beef';
-      if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
-      if (t.includes('豬') || t.includes('pork')) return 'Pork';
-      if (t.includes('海鮮') || t.includes('seafood') || t.includes('sea food')) return 'Seafood';
-      if (t.includes('素') || t.includes('vegan') || t.includes('veg')) return 'Vegan';
-      return null;
-    }
+function chooseMeatTagFromText(raw) {
+  const t = normalize(raw);
+  if (t.includes('牛') || t.includes('beef')) return 'Beef';
+  if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
+  if (t.includes('豬') || t.includes('pork')) return 'Pork';
+  if (t.includes('海鮮') || t.includes('seafood') || t.includes('sea food')) return 'Sea Food';
+  if (t.includes('素') || t.includes('vegan') || t.includes('veg')) return 'Vegan';
+  return null;
+}
+
+function recommendDishes(meatTag) {
+  let list = menuData.filter(
+    d => (d.meat || '').toLowerCase() === meatTag.toLowerCase()
+  );
+  // 之後嗰段 period / slice(0,3) 可以照舊
+}
 
     function handleKeyword(raw) {
       const t = normalize(raw);
@@ -820,3 +841,4 @@
   </script>
 </body>
 </html>
+

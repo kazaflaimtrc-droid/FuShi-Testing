@@ -227,7 +227,7 @@
   </div>
 
   <script>
-    // 這裡換成你部署後的 Web App URL（連 ?type=menu）
+    // 改成你 Apps Script Web App 真實 URL（記得加 ?type=menu）
     const MENU_API_URL =
       'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
 
@@ -369,57 +369,43 @@
       }
     };
 
-async function loadMenuFromSheet() {
-  try {
-    const res = await fetch(MENU_API_URL);
-    if (!res.ok) {
-      console.error('loadMenuFromSheet error', res.status, res.statusText);
-      addBot(
-        currentLang === 'zh'
-          ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-          : 'There was an issue loading the live menu.'
-      );
-      return;
+    async function loadMenuFromSheet() {
+      try {
+        const res = await fetch(MENU_API_URL);
+        if (!res.ok) {
+          console.error('loadMenuFromSheet error', res.status, res.statusText);
+          addBot(
+            currentLang === 'zh'
+              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+              : 'There was an issue loading the live menu.'
+          );
+          return;
+        }
+
+        const data = await res.json();
+
+        // 期望 JSON 為：
+        // [{period,itemZh,itemEn,meatEn,price}, ...]，第 1 行係表頭
+        menuData = (data || [])
+          .filter((row, idx) => idx > 0 && (row.itemZh || row.itemEn))
+          .map(row => ({
+            period: row.period || 'All Day',
+            nameZh: row.itemZh || row.itemEn || '',
+            nameEn: row.itemEn || row.itemZh || '',
+            meat:   (row.meatEn || '').toString().trim(),
+            price:  Number(row.price || 0) || 0
+          }));
+
+        console.log('menuData sample', menuData[0]);
+      } catch (err) {
+        console.error('loadMenuFromSheet exception', err);
+        addBot(
+          currentLang === 'zh'
+            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+            : 'There was an issue loading the live menu.'
+        );
+      }
     }
-
-    const data = await res.json();
-
-    // 依據你而家 JSON 結構：
-    // { period:'Breakfast', item:'特厚咸牛肉鬆蛋治', meat:'Corned Beef ...', price:'牛' }
-    menuData = (data || [])
-      .filter((row, idx) => idx > 0 && row.item)   // 跳過表頭
-      .map(row => {
-        const period = row.period || 'All Day';
-        const itemZh = (row.item || '').toString().trim();
-        const itemEn = (row.meat || '').toString().trim();   // 英文名放咗喺 meat
-        const meatTagZh = (row.price || '').toString().trim(); // 牛 / 雞 / 豬 / 海鮮 / 素食
-
-        let meatTagEn = '';
-        if (meatTagZh === '牛') meatTagEn = 'Beef';
-        else if (meatTagZh === '雞') meatTagEn = 'Chicken';
-        else if (meatTagZh === '豬') meatTagEn = 'Pork';
-        else if (meatTagZh === '海鮮') meatTagEn = 'Sea Food';
-        else if (meatTagZh === '素食' || meatTagZh === '素') meatTagEn = 'Vegan';
-
-        return {
-          period: period,
-          nameZh: itemZh || itemEn,
-          nameEn: itemEn || itemZh,
-          meat: meatTagEn,          // 用嚟 filter Beef/Chicken...
-          price: 0                  // 你而家冇真正價錢欄，暫時設 0
-        };
-      });
-
-    console.log('menuData sample', menuData[0]);
-  } catch (err) {
-    console.error('loadMenuFromSheet exception', err);
-    addBot(
-      currentLang === 'zh'
-        ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-        : 'There was an issue loading the live menu.'
-    );
-  }
-}
 
     function applyLanguage() {
       titleText.textContent = texts.title[currentLang];
@@ -554,22 +540,15 @@ async function loadMenuFromSheet() {
       addBotHTML('👉 <a href="https://heyzine.com/flip-book/FuShi福食Menu" target="_blank">FuShi Menu</a>');
     }
 
-function chooseMeatTagFromText(raw) {
-  const t = normalize(raw);
-  if (t.includes('牛') || t.includes('beef')) return 'Beef';
-  if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
-  if (t.includes('豬') || t.includes('pork')) return 'Pork';
-  if (t.includes('海鮮') || t.includes('seafood') || t.includes('sea food')) return 'Sea Food';
-  if (t.includes('素') || t.includes('vegan') || t.includes('veg')) return 'Vegan';
-  return null;
-}
-
-function recommendDishes(meatTag) {
-  let list = menuData.filter(
-    d => (d.meat || '').toLowerCase() === meatTag.toLowerCase()
-  );
-  // 之後嗰段 period / slice(0,3) 可以照舊
-}
+    function chooseMeatTagFromText(raw) {
+      const t = normalize(raw);
+      if (t.includes('牛') || t.includes('beef')) return 'Beef';
+      if (t.includes('雞') || t.includes('chicken')) return 'Chicken';
+      if (t.includes('豬') || t.includes('pork')) return 'Pork';
+      if (t.includes('海鮮') || t.includes('seafood') || t.includes('sea food')) return 'Seafood';
+      if (t.includes('素') || t.includes('vegan') || t.includes('veg')) return 'Vegan';
+      return null;
+    }
 
     function handleKeyword(raw) {
       const t = normalize(raw);
@@ -752,7 +731,6 @@ function recommendDishes(meatTag) {
       const text = currentLang === 'zh' ? msgZh : msgEn;
       const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
-
       addBot(texts.rsvDone[currentLang]);
     }
 
@@ -841,4 +819,3 @@ function recommendDishes(meatTag) {
   </script>
 </body>
 </html>
-

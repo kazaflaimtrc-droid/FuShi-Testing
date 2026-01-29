@@ -385,29 +385,30 @@
 
         const data = await res.json();
 
-        menuData = (data || [])
-          .filter(row => row.item)
-          .map(row => {
-            const period = (row.period || 'All Day').toString().trim();
-            const itemZh = (row.item || '').toString().replace(/,$/, '').trim();
-            const itemEn = (row.meat || '').toString().trim();   // 你把英文名放在 meat
-            const meatZh = (row.price || '').toString().trim();  // 牛 / 雞 / 豬 / 海鮮 / 素食
+menuData = (data || [])
+  .filter(row => row.item)
+  .map(row => {
+    const period = (row.period || 'All Day').toString().trim();
+    const itemZh = (row.item || '').toString().replace(/,$/, '').trim();
+    const itemEn = (row.meat || '').toString().trim();   // 英文名
 
-            let meatTag = '';
-            if (meatZh === '牛') meatTag = 'Beef';
-            else if (meatZh === '雞') meatTag = 'Chicken';
-            else if (meatZh === '豬') meatTag = 'Pork';
-            else if (meatZh === '海鮮') meatTag = 'Sea Food';
-            else if (meatZh === '素' || meatZh === '素食') meatTag = 'Vegan';
+    // 肉類 tag 用你之前既 mapping，如果你冇就保持原來程式
+    const meatZh = (row.meatType || '').toString().trim();
+    let meatTag = '';
+    if (meatZh === '牛') meatTag = 'Beef';
+    else if (meatZh === '雞') meatTag = 'Chicken';
+    else if (meatZh === '豬') meatTag = 'Pork';
+    else if (meatZh === '海鮮') meatTag = 'Sea Food';
+    else if (meatZh === '素' || meatZh === '素食') meatTag = 'Vegan';
 
-            return {
-              period,
-              nameZh: itemZh || itemEn,
-              nameEn: itemEn || itemZh,
-              meat: meatTag,
-              price: null     // 目前 JSON 無真正價錢，先唔顯示
-            };
-          });
+    return {
+      period,
+      nameZh: itemZh || itemEn,
+      nameEn: itemEn || itemZh,
+      meat: meatTag,
+      price: Number(row.price || 0) || 0   // 直接用 JSON 價錢欄
+    };
+  });
 
         console.log('menuData sample', menuData[0]);
       } catch (err) {
@@ -834,3 +835,4 @@
   </script>
 </body>
 </html>
+

@@ -170,6 +170,7 @@
 
     <div id="chat" class="chat-window"></div>
 
+    <!-- 訂位表單 -->
     <div id="reservationForm" style="display:none;">
       <div style="margin-bottom:4px;">
         <label>人數 / People：</label>
@@ -192,6 +193,7 @@
       </button>
     </div>
 
+    <!-- 到會 / 大量訂購表單 -->
     <div id="cateringForm" style="display:none;">
       <div style="margin-bottom:4px;">
         <label>用途 / Occasion：</label>
@@ -213,7 +215,7 @@
         <label>簡單菜式 / Set：</label>
         <textarea id="catItems" placeholder="例如：到會A套餐 x2, B套餐 x1"></textarea>
       </div>
-      <div style="margin-bottom:4px%;">
+      <div style="margin-bottom:4px;">
         <label>聯絡人 / 電話：</label>
         <input id="catContact" type="text" placeholder="Mr Chan 9xxxxxxx">
       </div>
@@ -230,6 +232,9 @@
   </div>
 
   <script>
+    // ====== 設定：改成你自己的 Web App URL ======
+    const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbwP8r3A1P-37uG2BK9BRR95tzlK6OfUwl3UWj_mhZ7BwGl5xCt_pKWncO1ygX_I-JBEJQ/exec?type=menu';
+
     const chat = document.getElementById('chat');
     const input = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -255,48 +260,49 @@
     let currentLang = 'zh';
     let menuData = [];
 
-async function loadMenuFromSheet() {
-  const url = '你的 Web App URL 加 ?type=menu';
+    // ====== 從 Web App 讀取 Menu JSON ======
+    async function loadMenuFromSheet() {
+      try {
+        const res = await fetch(MENU_API_URL);
+        if (!res.ok) {
+          console.error('loadMenuFromSheet error', res.status, res.statusText);
+          addBot(
+            currentLang === 'zh'
+              ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+              : 'There was an issue loading the live menu.'
+          );
+          return;
+        }
 
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error('loadMenuFromSheet error', res.status, res.statusText);
-      addBot(
-        currentLang === 'zh'
-          ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-          : 'There was an issue loading the live menu.'
-      );
-      return;
+        const data = await res.json();
+
+        // data[0] 大多數係表頭，所以由 index 1 開始
+        menuData = (data || [])
+          .filter((row, idx) => idx > 0 && row.item)
+          .map(row => {
+            const rawMeat = row.meat || '';
+            // 例如 "牛\nBeef" -> "Beef"
+            const meatEn = rawMeat.split('\n').pop().trim();
+
+            return {
+              period: row.period || 'All Day',
+              nameZh: row.item || '',
+              nameEn: row.item || '',
+              meat: meatEn,
+              price: Number(row.price || 0) || 0
+            };
+          });
+
+        console.log('menuData sample', menuData[0]);
+      } catch (err) {
+        console.error('loadMenuFromSheet exception', err);
+        addBot(
+          currentLang === 'zh'
+            ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
+            : 'There was an issue loading the live menu.'
+        );
+      }
     }
-
-    const data = await res.json();
-
-    menuData = (data || [])
-      .filter((row, idx) => idx > 0 && row.item)   // 跳過第 1 行表頭
-      .map(row => {
-        const rawMeat = row.meat || '';
-        const meatEn = rawMeat.split('\n').pop().trim(); // "牛\nBeef" -> "Beef"
-
-        return {
-          period: row.period || 'All Day',
-          nameZh: row.item || '',
-          nameEn: row.item || '',
-          meat: meatEn,
-          price: Number(row.price || 0) || 0
-        };
-      });
-
-    console.log('menuData sample', menuData[0]);
-  } catch (err) {
-    console.error('loadMenuFromSheet exception', err);
-    addBot(
-      currentLang === 'zh'
-        ? '載入餐牌資料時遇到問題，暫時未能使用最新菜式。'
-        : 'There was an issue loading the live menu.'
-    );
-  }
-}
 
     const texts = {
       title: {
@@ -435,6 +441,7 @@ async function loadMenuFromSheet() {
       return `HK$${price}`;
     }
 
+    // ====== 推介菜式 ======
     function recommendDishes(meatTag) {
       if (!menuData || menuData.length === 0) {
         addBot(
@@ -506,6 +513,7 @@ async function loadMenuFromSheet() {
       return null;
     }
 
+    // ====== Intent 分類 ======
     function handleKeyword(raw) {
       const t = normalize(raw);
       addUser(raw);
@@ -755,6 +763,7 @@ async function loadMenuFromSheet() {
       }
     });
 
+    // 初始化
     applyLanguage();
     loadMenuFromSheet()
       .then(() => {
@@ -766,5 +775,3 @@ async function loadMenuFromSheet() {
   </script>
 </body>
 </html>
-
-

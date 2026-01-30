@@ -397,7 +397,9 @@
 
     function formatLine(d){
       const name = (currentLang === 'zh') ? (d.nameZh || d.nameEn) : (d.nameEn || d.nameZh);
-      const alt  = (currentLang === 'zh') ? (d.nameEn ? `（${d.nameEn}）` : '') : (d.nameZh ? `(${d.nameZh})` : '';
+      const alt  = (currentLang === 'zh')
+        ? (d.nameEn ? `（${d.nameEn}）` : '')
+        : (d.nameZh ? `(${d.nameZh})` : '');
       const price = (d.price == null || Number.isNaN(d.price)) ? '' : ` - HK$${d.price}`;
       return `• ${name}${alt}${price}`;
     }

@@ -36,8 +36,13 @@
       padding:6px 6px 12px 6px; border-bottom:1px solid var(--line);
     }
     .brand{display:flex; align-items:center; gap:10px; min-width:0;}
-    .brand img{width:56px;height:56px;border-radius:12px;
-      object-fit:cover;border:1px solid rgba(46,125,50,.25);background:#fff;;
+    .brand img{
+      width:48px;
+      height:48px;
+      border-radius:12px;
+      object-fit:contain;          /* 如果想中間裁剪可改回 cover */
+      border:1px solid rgba(46,125,50,.25);
+      background:#fff;
     }
     .brand .title{display:flex; flex-direction:column; gap:2px; min-width:0;}
     .brand .title strong{
@@ -65,7 +70,6 @@
     }
     .bot{background:linear-gradient(135deg, rgba(46,125,50,.10), rgba(46,125,50,.05)); border-left:4px solid rgba(46,125,50,.55);}
     .user{margin-left:auto; text-align:right; background:linear-gradient(135deg, rgba(255,183,77,.22), rgba(255,183,77,.10)); border-right:4px solid rgba(255,183,77,.75);}
-
     .hot-keys{display:flex; gap:8px; overflow-x:auto; padding:2px 2px; scrollbar-width:none;}
     .hot-keys::-webkit-scrollbar{display:none}
     .hot-key-btn{
@@ -74,7 +78,6 @@
       transition:.15s; flex-shrink:0; font-weight:700;
     }
     .hot-key-btn:hover{background:rgba(46,125,50,.14); transform:translateY(-1px);}
-
     .forms{display:flex; flex-direction:column; gap:10px;}
     #reservationForm, #cateringForm{
       display:none; border:1px solid var(--line); border-radius:16px; padding:12px;
@@ -127,7 +130,6 @@
     </div>
 
     <div id="chat" class="chat-window"></div>
-
     <div class="hot-keys" id="hotKeys"></div>
 
     <div class="forms">
@@ -157,9 +159,9 @@
   </div>
 
   <script>
-    /************ 你要改 ************/
-    const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyuQzQMtTx9vZYuVLl6NAgLUKqC6BmZ0wwm_1L1CfDWVYpGBHtta9AF5FvpUf4odfPI_A/exec';
-    const LOGO_SRC = 'https://drive.google.com/file/d/1EGf3hy_wC8uTLRwX6wHnbmWqbVxjikR7'; // 同 folder 放 logo 檔，或改成 https://...
+    /************ 你要改：後端 URL & 圖片 & WhatsApp ************/
+    const MENU_API_URL = 'https://script.google.com/macros/d/AKfycbyuQzQMtTx9vZYuVLl6NAgLUKqC6BmZ0wwm_1L1CfDWVYpGBHtta9AF5FvpUf4odfPI_A/usercontent?type=menu';
+    const LOGO_SRC = 'https://drive.google.com/uc?export=view&id=1EGf3hy_wC8uTLRwX6wHnbmWqbVxjikR7';
     const WA_PHONE = '85264067605';
     const EMENU_URL = 'https://heyzine.com/flip-book/FuShi福食Menu';
     const ORDER_URL = 'https://fushi.softether.net/byod/byod.aspx?data=hwZVZ%2BqRSxraTV9YHWCRmw%3D%3D';
@@ -250,7 +252,7 @@
 
     /************ state ************/
     let currentLang = getLangFromUrlOrStorage();
-    let menuData = []; // normalized
+    let menuData = [];
 
     /************ helpers ************/
     function addBot(text){
@@ -276,7 +278,7 @@
     }
     function norm(s){ return (s || '').toString().toLowerCase().trim(); }
 
-    /************ language (reload) ************/
+    /************ language ************/
     function getLangFromUrlOrStorage(){
       const p = new URLSearchParams(location.search);
       const urlLang = (p.get('lang') || '').toLowerCase();
@@ -364,6 +366,12 @@
         menuData = (Array.isArray(data) ? data : [])
           .map(normalizeRow)
           .filter(x => x.nameZh || x.nameEn);
+        if (menuData.length){
+          addBot(currentLang === 'zh'
+            ? `已載入最新菜單：${menuData.length} 款。`
+            : `Live menu loaded: ${menuData.length} items.`
+          );
+        }
       }catch(e){
         console.error(e);
         addBot(t.menuFail);
@@ -562,12 +570,6 @@ Please suggest suitable sets/options. Thank you!`.trim();
       applyLanguageUI();
       welcome();
       await loadMenu();
-      if (menuData.length) {
-        addBot(currentLang === 'zh'
-          ? `已載入最新菜單：${menuData.length} 款。`
-          : `Live menu loaded: ${menuData.length} items.`
-        );
-      }
     })();
   </script>
 </body>

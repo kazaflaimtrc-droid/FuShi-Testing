@@ -37,10 +37,10 @@
     }
     .brand{display:flex; align-items:center; gap:10px; min-width:0;}
     .brand img{
-      width:98px;           /* 固定寬度 */
-      height:112px;         /* 固定高度 */
+      width:98px;
+      height:112px;
       border-radius:12px;
-      object-fit:contain;   /* 如需裁剪可改 cover */
+      object-fit:contain;  /* 如想裁剪改 cover */
       border:1px solid rgba(46,125,50,.25);
       background:#fff;
     }
@@ -160,8 +160,8 @@
 
   <script>
     /************ 你要改：後端 URL & 圖片 & WhatsApp ************/
-    const MENU_API_URL = 'https://script.google.com/macros/s/AKfycby5S6EXkqphOxGxjX84TP7I1a2L5JJheyl7dnIJOLgvRA73QeVGtJ-LeMP26bWeCUioUg/exec';
-    const LOGO_SRC = 'https://drive.google.com/file/d/1Vn7Nbwn_kL1zlqxMjRcrrDe5Pes4NWOb/view';   // 這裡改成你真實 logo 圖片 URL
+    const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyuQzQMtTx9vZYuVLl6NAgLUKqC6BmZ0wwm_1L1CfDWVYpGBHtta9AF5FvpUf4odfPI_A/exec';
+    const LOGO_SRC = 'https://drive.google.com/uc?export=view&id=1EGf3hy_wC8uTLRwX6wHnbmWqbVxjikR7';   // 改成可直接顯示圖片的 URL
     const WA_PHONE = '85264067605';
     const EMENU_URL = 'https://heyzine.com/flip-book/FuShi福食Menu';
     const ORDER_URL = 'https://fushi.softether.net/byod/byod.aspx?data=hwZVZ%2BqRSxraTV9YHWCRmw%3D%3D';
@@ -278,12 +278,11 @@
     }
     function norm(s){ return (s || '').toString().toLowerCase().trim(); }
 
-    // 按時間分早餐 / 午餐 / 午茶
     function getMealPeriodByTime() {
       const hour = new Date().getHours();
       if (hour < 11) return 'breakfast';
       if (hour < 15) return 'lunch';
-      return 'lunch_snack';
+      return 'lunch_tea';
     }
 
     /************ language ************/
@@ -373,12 +372,7 @@
         menuData = (Array.isArray(data) ? data : [])
           .map(normalizeRow)
           .filter(x => x.nameZh || x.nameEn);
-        if (menuData.length){
-          addBot(currentLang === 'zh'
-            ? `已載入最新菜單：${menuData.length} 款。`
-            : `Live menu loaded: ${menuData.length} items.`
-          );
-        }
+        // 不再顯示「已載入最新菜單」
       }catch(e){
         console.error(e);
         addBot(t.menuFail);
@@ -408,7 +402,8 @@
       const t = I18N[currentLang];
       if(!menuData.length){
         addBot(t.menuFail);
-        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.menuLink}</a>`);
+        addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
         return;
       }
 
@@ -418,13 +413,15 @@
 
       if(!list.length){
         addBot(t.noMatch);
-        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.menuLink}</a>`);
+        addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
         return;
       }
 
       addBot(t.picked);
       addBotHTML(list.map(formatLine).join('<br>'));
-      addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.menuLink}</a>`);
+      addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+      addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
     }
 
     /************ flows ************/
@@ -449,7 +446,7 @@
         } else if (period === 'lunch') {
           addBot('It is lunch time, I will suggest some lunch dishes.');
         } else {
-          addBot('It is afternoon now, I can suggest both lunch and snack items.');
+          addBot('It is afternoon now, I can suggest both lunch and tea items.');
         }
       }
 

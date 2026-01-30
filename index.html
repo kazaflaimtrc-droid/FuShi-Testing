@@ -160,8 +160,8 @@
 
   <script>
     /************ 你要改：後端 URL & 圖片 & WhatsApp ************/
-    const MENU_API_URL = 'https://script.google.com/macros/s/AKfycby5S6EXkqphOxGxjX84TP7I1a2L5JJheyl7dnIJOLgvRA73QeVGtJ-LeMP26bWeCUioUg/exec';
-    const LOGO_SRC = 'https://';   // 這裡改成你真實 logo 圖片 URL
+    const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyuQzQMtTx9vZYuVLl6NAgLUKqC6BmZ0wwm_1L1CfDWVYpGBHtta9AF5FvpUf4odfPI_A/exec';
+    const LOGO_SRC = 'https://你的圖片URL';   // 這裡改成你真實 logo 圖片 URL
     const WA_PHONE = '85264067605';
     const EMENU_URL = 'https://heyzine.com/flip-book/FuShi福食Menu';
     const ORDER_URL = 'https://fushi.softether.net/byod/byod.aspx?data=hwZVZ%2BqRSxraTV9YHWCRmw%3D%3D';
@@ -409,27 +409,22 @@
       if(!menuData.length){
         addBot(t.menuFail);
         addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
-        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
         return;
       }
-    
+
       const list = menuData
         .filter(d => norm(d.meat) === norm(meatTag))
         .slice(0, 3);
-    
+
       if(!list.length){
         addBot(t.noMatch);
         addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
-        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
         return;
       }
-    
+
       addBot(t.picked);
       addBotHTML(list.map(formatLine).join('<br>'));
-    
-      // 電子餐牌 + 網上落單 兩條 link 一齊出
       addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
-      addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
     }
 
     /************ flows ************/

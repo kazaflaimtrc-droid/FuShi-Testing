@@ -408,7 +408,7 @@
       const t = I18N[currentLang];
       if(!menuData.length){
         addBot(t.menuFail);
-        addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.menuLink}</a>`);
         return;
       }
 
@@ -418,13 +418,13 @@
 
       if(!list.length){
         addBot(t.noMatch);
-        addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.menuLink}</a>`);
         return;
       }
 
       addBot(t.picked);
       addBotHTML(list.map(formatLine).join('<br>'));
-      addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+      addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.menuLink}</a>`);
     }
 
     /************ flows ************/

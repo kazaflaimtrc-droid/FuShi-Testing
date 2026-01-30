@@ -375,8 +375,8 @@
           .filter(x => x.nameZh || x.nameEn);
         if (menuData.length){
           addBot(currentLang === 'zh'
-            ? `而家共有菜式：${menuData.length} 款。`
-            : `Available style: ${menuData.length} items.`
+            ? `已載入最新菜單：${menuData.length} 款。`
+            : `Live menu loaded: ${menuData.length} items.`
           );
         }
       }catch(e){
@@ -409,22 +409,27 @@
       if(!menuData.length){
         addBot(t.menuFail);
         addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
         return;
       }
-
+    
       const list = menuData
         .filter(d => norm(d.meat) === norm(meatTag))
         .slice(0, 3);
-
+    
       if(!list.length){
         addBot(t.noMatch);
         addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
         return;
       }
-
+    
       addBot(t.picked);
       addBotHTML(list.map(formatLine).join('<br>'));
+    
+      // 電子餐牌 + 網上落單 兩條 link 一齊出
       addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+      addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
     }
 
     /************ flows ************/

@@ -373,12 +373,6 @@
         menuData = (Array.isArray(data) ? data : [])
           .map(normalizeRow)
           .filter(x => x.nameZh || x.nameEn);
-        if (menuData.length){
-          addBot(currentLang === 'zh'
-            ? `已載入最新菜單：${menuData.length} 款。`
-            : `Live menu loaded: ${menuData.length} items.`
-          );
-        }
       }catch(e){
         console.error(e);
         addBot(t.menuFail);

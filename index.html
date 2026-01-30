@@ -37,10 +37,10 @@
     }
     .brand{display:flex; align-items:center; gap:10px; min-width:0;}
     .brand img{
-      width:56px;
-      height:56px;
+      width:98px;           /* 固定寬度 */
+      height:112px;         /* 固定高度 */
       border-radius:12px;
-      object-fit:cover;          /* 如果想中間裁剪可改回 cover */
+      object-fit:contain;   /* 如需裁剪可改 cover */
       border:1px solid rgba(46,125,50,.25);
       background:#fff;
     }
@@ -160,8 +160,8 @@
 
   <script>
     /************ 你要改：後端 URL & 圖片 & WhatsApp ************/
-    const MENU_API_URL = 'https://script.google.com/macros/s/AKfycby5S6EXkqphOxGxjX84TP7I1a2L5JJheyl7dnIJOLgvRA73QeVGtJ-LeMP26bWeCUioUg/exec';
-    const LOGO_SRC = 'https://drive.google.com/file/d/1EGf3hy_wC8uTLRwX6wHnbmWqbVxjikR7/view?pli=1';
+    const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyuQzQMtTx9vZYuVLl6NAgLUKqC6BmZ0wwm_1L1CfDWVYpGBHtta9AF5FvpUf4odfPI_A/exec';
+    const LOGO_SRC = 'https://你的圖片URL';   // 這裡改成你真實 logo 圖片 URL
     const WA_PHONE = '85264067605';
     const EMENU_URL = 'https://heyzine.com/flip-book/FuShi福食Menu';
     const ORDER_URL = 'https://fushi.softether.net/byod/byod.aspx?data=hwZVZ%2BqRSxraTV9YHWCRmw%3D%3D';
@@ -278,6 +278,14 @@
     }
     function norm(s){ return (s || '').toString().toLowerCase().trim(); }
 
+    // 按時間分早餐 / 午餐 / 午茶
+    function getMealPeriodByTime() {
+      const hour = new Date().getHours();
+      if (hour < 11) return 'breakfast';
+      if (hour < 15) return 'lunch';
+      return 'lunch_tea';
+    }
+
     /************ language ************/
     function getLangFromUrlOrStorage(){
       const p = new URLSearchParams(location.search);
@@ -361,7 +369,6 @@
       const t = I18N[currentLang];
       try{
         const res = await fetch(MENU_API_URL, { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         menuData = (Array.isArray(data) ? data : [])
           .map(normalizeRow)
@@ -405,7 +412,10 @@
         return;
       }
 
-      const list = menuData.filter(d => norm(d.meat) === norm(meatTag)).slice(0, 3);
+      const list = menuData
+        .filter(d => norm(d.meat) === norm(meatTag))
+        .slice(0, 3);
+
       if(!list.length){
         addBot(t.noMatch);
         addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
@@ -418,9 +428,44 @@
     }
 
     /************ flows ************/
-    function flowEat(){ rsvForm.style.display='none'; cateringForm.style.display='none'; addBot(I18N[currentLang].askMeat); }
-    function flowReservation(){ cateringForm.style.display='none'; rsvForm.style.display='block'; addBot(I18N[currentLang].rsvIntro); }
-    function flowCatering(){ rsvForm.style.display='none'; cateringForm.style.display='block'; addBot(I18N[currentLang].catIntro); }
+    function flowEat(){
+      rsvForm.style.display='none';
+      cateringForm.style.display='none';
+
+      const period = getMealPeriodByTime();
+      const t = I18N[currentLang];
+
+      if (currentLang === 'zh') {
+        if (period === 'breakfast') {
+          addBot('而家仲係早餐時段，我可以幫你揀返啲早餐款式～');
+        } else if (period === 'lunch') {
+          addBot('而家係午餐時段，我幫你揀啲 lunch 菜式～');
+        } else {
+          addBot('而家下午時段，可以試吓我哋嘅午餐同茶點～');
+        }
+      } else {
+        if (period === 'breakfast') {
+          addBot('It is breakfast time, let me suggest some breakfast items.');
+        } else if (period === 'lunch') {
+          addBot('It is lunch time, I will suggest some lunch dishes.');
+        } else {
+          addBot('It is afternoon now, I can suggest both lunch and tea items.');
+        }
+      }
+
+      addBot(t.askMeat);
+    }
+
+    function flowReservation(){
+      cateringForm.style.display='none';
+      rsvForm.style.display='block';
+      addBot(I18N[currentLang].rsvIntro);
+    }
+    function flowCatering(){
+      rsvForm.style.display='none';
+      cateringForm.style.display='block';
+      addBot(I18N[currentLang].catIntro);
+    }
 
     function openWhatsAppReservation(){
       const pax = rsvPaxInput.value || '';

@@ -37,10 +37,10 @@
     }
     .brand{display:flex; align-items:center; gap:10px; min-width:0;}
     .brand img{
-      width:98px;           /* 固定寬度 */
-      height:112px;         /* 固定高度 */
+      width:98px;
+      height:112px;
       border-radius:12px;
-      object-fit:contain;   /* 如需裁剪可改 cover */
+      object-fit:contain;
       border:1px solid rgba(46,125,50,.25);
       background:#fff;
     }
@@ -161,10 +161,14 @@
   <script>
     /************ 你要改：後端 URL & 圖片 & WhatsApp ************/
     const MENU_API_URL = 'https://script.google.com/macros/s/AKfycby5S6EXkqphOxGxjX84TP7I1a2L5JJheyl7dnIJOLgvRA73QeVGtJ-LeMP26bWeCUioUg/exec';
-    const LOGO_SRC = 'https://deckchairs.co.uk/cdn/shop/files/Fabric_PCEG_2022-1-scaled.jpg?v=1712753622';   // 這裡改成你真實 logo 圖片 URL
+    const LOGO_SRC = 'https://deckchairs.co.uk/cdn/shop/files/Fabric_PCEG_2022-1-scaled.jpg?v=1712753622';
     const WA_PHONE = '85264067605';
     const EMENU_URL = 'https://heyzine.com/flip-book/FuShi福食Menu';
     const ORDER_URL = 'https://fushi.softether.net/byod/byod.aspx?data=hwZVZ%2BqRSxraTV9YHWCRmw%3D%3D';
+
+    /* 新增：到會餐牌 & Google Form */
+    const CATERING_MENU_URL = 'https://heyzine.com/flip-book/FuShi%E7%A6%8F%E9%A3%9FCateringMenu%E5%88%B0%E6%9C%83%E9%A4%90%E7%89%8C#page/1';
+    const CATERING_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeBUXo26xLgbTr9kl_153XZ54_lCc8F3uL1uaH2J6Of_NRLMw/viewform';
 
     /************ i18n ************/
     const I18N = {
@@ -181,7 +185,8 @@
         menuLink: '電子餐牌',
         orderLink: '網上落單',
         rsvIntro: '好呀～請填寫訂位資料，然後用 WhatsApp 傳送俾我哋確認。',
-        catIntro: '到會／大量訂購：填寫資料後用 WhatsApp 傳送俾我哋。',
+        /* 更新：到會提示 WhatsApp + 連結 */
+        catIntro: '到會／大量訂購：請先簡單填寫以下資料，我哋會經 WhatsApp 同你跟進；你亦可以先睇到會餐牌同填到會訂購表格。',
         sent: '已開啟 WhatsApp，我哋會盡快回覆你確認。',
         labels: { pax:'人數', date:'日期', time:'時間', phone:'電話', occ:'用途', qty:'人數／份量', items:'菜式 / Set', contact:'聯絡' },
         btn: { rsv:'用 WhatsApp 傳送訂位資料', cat:'用 WhatsApp 傳送到會／大量訂購資料' },
@@ -207,7 +212,8 @@
         menuLink: 'E-menu',
         orderLink: 'Online order',
         rsvIntro: 'Sure—fill in booking details and send via WhatsApp for confirmation.',
-        catIntro: 'Catering / bulk order: fill in details and send via WhatsApp.',
+        /* 更新：到會提示 WhatsApp + 連結 */
+        catIntro: 'Catering / bulk order: please fill in the basic info below, we will follow up via WhatsApp. You can also check the catering menu and submit the online order form.',
         sent: 'WhatsApp opened. We will reply shortly to confirm.',
         labels: { pax:'People', date:'Date', time:'Time', phone:'Phone', occ:'Occasion', qty:'Pax / Quantity', items:'Set / Dishes', contact:'Contact' },
         btn: { rsv:'Send booking via WhatsApp', cat:'Send catering / bulk order via WhatsApp' },
@@ -223,6 +229,7 @@
     };
 
     /************ DOM ************/
+
     const chat = document.getElementById('chat');
     const input = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -278,7 +285,6 @@
     }
     function norm(s){ return (s || '').toString().toLowerCase().trim(); }
 
-    // 按時間分早餐 / 午餐 / 午茶
     function getMealPeriodByTime() {
       const hour = new Date().getHours();
       if (hour < 11) return 'breakfast';
@@ -393,7 +399,7 @@
 
     function formatLine(d){
       const name = (currentLang === 'zh') ? (d.nameZh || d.nameEn) : (d.nameEn || d.nameZh);
-      const alt  = (currentLang === 'zh') ? (d.nameEn ? `（${d.nameEn}）` : '') : (d.nameZh ? `(${d.nameZh})` : '');
+      const alt  = (currentLang === 'zh') ? (d.nameEn ? `（${d.nameEn}）` : '') : (d.nameZh ? `(${d.nameZh})` : '';
       const price = (d.price == null || Number.isNaN(d.price)) ? '' : ` - HK$${d.price}`;
       return `• ${name}${alt}${price}`;
     }
@@ -406,22 +412,21 @@
         addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
         return;
       }
-    
+
       const list = menuData
         .filter(d => norm(d.meat) === norm(meatTag))
         .slice(0, 3);
-    
+
       if(!list.length){
         addBot(t.noMatch);
         addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
         addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
         return;
       }
-    
+
       addBot(t.picked);
       addBotHTML(list.map(formatLine).join('<br>'));
-    
-      // 電子餐牌 + 網上落單 兩條 link 一齊出
+
       addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
       addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
     }
@@ -460,10 +465,22 @@
       rsvForm.style.display='block';
       addBot(I18N[currentLang].rsvIntro);
     }
+
+    /* 更新：到會 flow = WhatsApp 表單 + 到會餐牌 + Google Form */
     function flowCatering(){
       rsvForm.style.display='none';
       cateringForm.style.display='block';
-      addBot(I18N[currentLang].catIntro);
+
+      const t = I18N[currentLang];
+      addBot(t.catIntro);
+
+      if (currentLang === 'zh') {
+        addBotHTML(`👉 <a href="${CATERING_MENU_URL}" target="_blank">到會餐牌</a>`);
+        addBotHTML(`👉 <a href="${CATERING_FORM_URL}" target="_blank">到會訂購表格（可選）</a>`);
+      } else {
+        addBotHTML(`👉 <a href="${CATERING_MENU_URL}" target="_blank">Catering Menu</a>`);
+        addBotHTML(`👉 <a href="${CATERING_FORM_URL}" target="_blank">Catering Order Form (optional)</a>`);
+      }
     }
 
     function openWhatsAppReservation(){
@@ -493,6 +510,7 @@ Please help confirm the booking. Thank you!`.trim();
       addBot(I18N[currentLang].sent);
     }
 
+    /* 更新：WhatsApp 為主，客人如有填 Google Form 可在訊息提一提 */
     function openWhatsAppCatering(){
       const occ = catOccasionInput.value || '';
       const pax = catPaxInput.value || '';
@@ -509,6 +527,7 @@ Please help confirm the booking. Thank you!`.trim();
 時間：${time}
 大約想要嘅套餐／菜式：${items}
 聯絡人／電話：${contact}
+（如已填寫 Google 到會訂購表格，可在此補充：我已填寫表格）
 麻煩提供套餐或建議，多謝！`.trim();
 
       const msgEn =
@@ -519,6 +538,7 @@ Date: ${date}
 Time: ${time}
 Preferred sets / dishes: ${items}
 Contact: ${contact}
+(If I have submitted the Google catering order form, I can mention it here.)
 Please suggest suitable sets/options. Thank you!`.trim();
 
       const text = (currentLang === 'zh') ? msgZh : msgEn;

@@ -183,7 +183,6 @@
         menuLink: '電子餐牌',
         orderLink: '網上落單',
         rsvIntro: '好呀～請填寫訂位資料，然後用 WhatsApp 傳送俾我哋確認。',
-        /* 更新：到會提示 WhatsApp + 連結 */
         catIntro: '到會／大量訂購：請先簡單填寫以下資料，我哋會經 WhatsApp 同你跟進；你亦可以先睇到會餐牌同填到會訂購表格。',
         sent: '已開啟 WhatsApp，我哋會盡快回覆你確認。',
         labels: { pax:'人數', date:'日期', time:'時間', phone:'電話', occ:'用途', qty:'人數／份量', items:'菜式 / Set', contact:'聯絡' },
@@ -210,7 +209,6 @@
         menuLink: 'E-menu',
         orderLink: 'Online order',
         rsvIntro: 'Sure—fill in booking details and send via WhatsApp for confirmation.',
-        /* 更新：到會提示 WhatsApp + 連結 */
         catIntro: 'Catering / bulk order: please fill in the basic info below, we will follow up via WhatsApp. You can also check the catering menu and submit the online order form.',
         sent: 'WhatsApp opened. We will reply shortly to confirm.',
         labels: { pax:'People', date:'Date', time:'Time', phone:'Phone', occ:'Occasion', qty:'Pax / Quantity', items:'Set / Dishes', contact:'Contact' },
@@ -384,7 +382,7 @@
       }
     }
 
-    /************ recommendation ************/
+    /************ recommendation / period helpers ************/
     function chooseMeatTag(raw){
       const s = norm(raw);
       if (s.includes('牛') || s.includes('beef')) return 'Beef';
@@ -392,6 +390,21 @@
       if (s.includes('豬') || s.includes('pork')) return 'Pork';
       if (s.includes('海鮮') || s.includes('seafood') || s.includes('sea food')) return 'Sea Food';
       if (s.includes('素') || s.includes('vegan') || s.includes('veg')) return 'Vegan';
+      return null;
+    }
+
+    // 新增：將用戶輸入轉成餐段
+    function choosePeriod(raw) {
+      const s = norm(raw);
+      if (s.includes('早') || s.includes('早餐') || s.includes('breakfast') || s.includes('morning')) {
+        return 'breakfast';
+      }
+      if (s.includes('午') || s.includes('lunch')) {
+        return 'lunch';
+      }
+      if (s.includes('茶') || s.includes('下午茶') || s.includes('tea')) {
+        return 'lunch_tea';
+      }
       return null;
     }
 
@@ -426,6 +439,46 @@
 
       addBot(t.picked);
       addBotHTML(list.map(formatLine).join('<br>'));
+
+      addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+      addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
+    }
+
+    // 新增：按早餐／午餐／茶點列出全部菜式
+    function listByPeriod(periodKey) {
+      const t = I18N[currentLang];
+
+      if (!menuData.length) {
+        addBot(t.menuFail);
+        addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+        addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
+        return;
+      }
+
+      const list = menuData.filter(d => norm(d.period) === norm(periodKey));
+
+      if (!list.length) {
+        if (currentLang === 'zh') {
+          addBot('暫時喺系統入面搵唔到呢個時段嘅菜式。');
+        } else {
+          addBot('No dishes found for this time period.');
+        }
+        addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
+        return;
+      }
+
+      if (currentLang === 'zh') {
+        if (periodKey === 'breakfast') addBot('以下係目前早餐時段嘅全部菜式：');
+        else if (periodKey === 'lunch') addBot('以下係目前午餐時段嘅全部菜式：');
+        else addBot('以下係目前下午茶／午市時段嘅全部菜式：');
+      } else {
+        if (periodKey === 'breakfast') addBot('Here are all breakfast items:');
+        else if (periodKey === 'lunch') addBot('Here are all lunch items:');
+        else addBot('Here are all lunch / tea-time items:');
+      }
+
+      const html = list.map(formatLine).join('<br>');
+      addBotHTML(html);
 
       addBotHTML(`👉 <a href="${EMENU_URL}" target="_blank">${t.menuLink}</a>`);
       addBotHTML(`👉 <a href="${ORDER_URL}" target="_blank">${t.orderLink}</a>`);
@@ -466,7 +519,6 @@
       addBot(I18N[currentLang].rsvIntro);
     }
 
-    /* 更新：到會 flow = WhatsApp 表單 + 到會餐牌 + Google Form */
     function flowCatering(){
       rsvForm.style.display='none';
       cateringForm.style.display='block';
@@ -510,7 +562,6 @@ Please help confirm the booking. Thank you!`.trim();
       addBot(I18N[currentLang].sent);
     }
 
-    /* 更新：WhatsApp 為主，客人如有填 Google Form 可在訊息提一提 */
     function openWhatsAppCatering(){
       const occ = catOccasionInput.value || '';
       const pax = catPaxInput.value || '';
@@ -553,10 +604,17 @@ Please suggest suitable sets/options. Thank you!`.trim();
       addUser(raw);
 
       const meatTag = chooseMeatTag(raw);
+      const periodKey = choosePeriod(raw);
 
       if (s.includes('今日食咩') || s.includes('食咩好') || s.includes('有咩好食') || s.includes('推介') || s.includes('推薦') || s.includes('what to eat') || (s.includes('what') && s.includes('eat'))) {
         flowEat();
         if (meatTag) recommend(meatTag);
+        return;
+      }
+
+      // 早 / 午 / 茶點 → 顯示該時段所有菜式
+      if (periodKey) {
+        listByPeriod(periodKey);
         return;
       }
 
@@ -588,8 +646,8 @@ Please suggest suitable sets/options. Thank you!`.trim();
       }
 
       addBot(currentLang === 'zh'
-        ? '你可以試吓：今日食咩好？／想食牛／幫我訂位／到會／外賣／優惠'
-        : 'Try: what to eat / beef / booking / catering / takeaway / promotion'
+        ? '你可以試吓：今日食咩好？／想食牛／早餐／午餐／茶點／幫我訂位／到會／外賣／優惠'
+        : 'Try: what to eat / beef / breakfast / lunch / tea / booking / catering / takeaway / promotion'
       );
     }
 

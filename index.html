@@ -283,7 +283,7 @@
       const hour = new Date().getHours();
       if (hour < 11) return 'breakfast';
       if (hour < 15) return 'lunch';
-      return 'lunch_tea';
+      return 'lunch_snack';
     }
 
     /************ language ************/
@@ -449,7 +449,7 @@
         } else if (period === 'lunch') {
           addBot('It is lunch time, I will suggest some lunch dishes.');
         } else {
-          addBot('It is afternoon now, I can suggest both lunch and tea items.');
+          addBot('It is afternoon now, I can suggest both lunch and snack items.');
         }
       }
 
